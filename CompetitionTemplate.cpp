@@ -20,13 +20,14 @@ vex::competition    DriverControl;
 
 int FineMotionPower = 30;
 int minTurn = 20;
-int FrontWheelPos = 0;
+int FrontWheelRotation = 5;
 void move2D(int MotorPower, int TurnPower);
+void setFrontWheel(int turns);
 
 void pre_auton( void ) {
-  // All activities that occur before the competition starts
-  // Example: clearing encoders, setting servo positions, ...
-  
+    // All activities that occur before the competition starts
+    // Example: clearing encoders, setting servo positions, ...
+    setFrontWheel(10);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -40,11 +41,11 @@ void pre_auton( void ) {
 /*---------------------------------------------------------------------------*/
 
 void autonomous( void ) {
-  // ..........................................................................
-  // Insert autonomous user code here.
+    // ..........................................................................
+    // Insert autonomous user code here.
     Brain.Screen.print("Autonomous has started.");
-  // ..........................................................................
-
+    // ..........................................................................
+    Brain.Screen.print(Brain.Battery.capacity());
 }
 
 /*----------------------------------------------------------------------------*/
@@ -58,63 +59,74 @@ void autonomous( void ) {
 /*----------------------------------------------------------------------------*/
 
 void usercontrol( void ) {
-
-  // User control code here, inside the loop
-
+    Brain.Screen.print(Brain.Battery.capacity());
+    // User control code here, inside the loop
+    
     // All activities that occur before the competition starts
-
+    
     // Example: clearing encoders, setting servo positions, ...
-
+    
     //Wait 2 seconds or 2000 milliseconds before starting the program.
-
+    
     vex::task::sleep(2000);
-
+    
     //Print to the screen that the program has started.
-
+    
     Brain.Screen.print("User Program has Started.");
-
+    
     while (1){
-
+        
         // This is the main execution loop for the user control program.
-
-        // Each time through the loop your program should update motor + servo 
-
+        
+        // Each time through the loop your program should update motor + servo
+        
         // values based on feedback from the joysticks.
-
+        
         // Set the motor speed based on the position of the controller
         int MotorSpeed = Controller1.Axis3.position(percentUnits::pct);
         int TurnSpeed = Controller1.Axis4.position(percentUnits::pct);
         if (Controller1.ButtonUp.pressing()){
-           MotorSpeed += FineMotionPower;
+            MotorSpeed += FineMotionPower;
         }
         
         if (Controller1.ButtonLeft.pressing()){
-           TurnSpeed -= FineMotionPower;
+            TurnSpeed -= FineMotionPower;
         }
         
         if (Controller1.ButtonRight.pressing()){
-           TurnSpeed += FineMotionPower;
+            TurnSpeed += FineMotionPower;
         }
         
         if (Controller1.ButtonDown.pressing()){
-           MotorSpeed -= FineMotionPower;
-        }        move2D(MotorSpeed, TurnSpeed);
-        if (Controller1.ButtonL1.pressing()){
-           LeftMotor.rotateFor(5.5, vex::rotationUnits::rev, false);
+            MotorSpeed -= FineMotionPower;
         }
-            
+        
+        move2D(MotorSpeed, TurnSpeed);
+        
+        if (Controller1.ButtonR1.pressing()){
+            PuncherMotor.rotateFor(5.5, vex::rotationUnits::rev, false);
+        }
+        if (Controller1.ButtonL1.pressing() ) {
+            setFrontWheel(-FrontWheelRotation);
+            //add function
+        }
+        if (Controller1.ButtonL2.pressing() ) {
+            setFrontWheel(FrontWheelRotation);
+        }
+        
+        
         // ........................................................................
-
-        // Insert user code here. This is where you use the joystick values to 
-
+        
+        // Insert user code here. This is where you use the joystick values to
+        
         // update your motors, etc.
-
+        
         // ........................................................................
-
-        vex::task::sleep(20); //Sleep the task for a short amount of time to prevent wasted resources. 
-
+        
+        vex::task::sleep(20); //Sleep the task for a short amount of time to prevent wasted resources.
+        
     }
-
+    
 }
 
 //
@@ -122,27 +134,29 @@ void usercontrol( void ) {
 //
 int main() {
     
-    //Run the pre-autonomous function. 
+    //Run the pre-autonomous function.
     pre_auton();
     
     //Set up callbacks for autonomous and driver control periods.
     Competition.autonomous( autonomous );
     Competition.drivercontrol( usercontrol );
     autonomous();
-    //Prevent main from exiting with an infinite loop.                        
+    usercontrol();
+    //Prevent main from exiting with an infinite loop.
     while(1) {
-      vex::task::sleep(100);//Sleep the task for a short amount of time to prevent wasted resources.
-    }    
-       
+        vex::task::sleep(100);//Sleep the task for a short amount of time to prevent wasted resources.
+    }
+    
 }
 
 void move2D(int MotorPower, int TurnPower) {
-
+    
     // Set the power of the motor
     if (abs(TurnPower) > minTurn) {
         TurnPower -= abs(TurnPower)/TurnPower *minTurn;
     }
     else TurnPower = 0;
+    
     
     int leftPower = MotorPower + TurnPower;
     int rightPower = MotorPower - TurnPower;
@@ -154,19 +168,27 @@ void move2D(int MotorPower, int TurnPower) {
     }
     
     LeftMotor.setVelocity(leftPower, vex::velocityUnits::pct);
-
+    
     RightMotor.setVelocity(rightPower, vex::velocityUnits::pct);
     
     
     // Set the direction of the motor spin
-
+    
     LeftMotor.spin(vex::directionType::fwd);
-
+    
     RightMotor.spin(vex::directionType::fwd);
     
     
-
+    
 }
+
+void setFrontWheel(int turns) {
+    FrontMotor.setVelocity(50, vex::velocityUnits::pct);
+    FrontMotor.rotateFor(turns, vex::rotationUnits::rev, false);
+}
+
+
+
 
 void climb(){
     
