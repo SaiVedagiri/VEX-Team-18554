@@ -28,8 +28,17 @@ void move2D(int MotorPower, int TurnPower);
 void setFrontWheel(int frontDirection);
 void armMotion(int armPower);
 void handMotion(int handPower);
-void handRotateMotion(int handRotatePower);
-int clawState = 0;
+void handRotateMotion();
+int RotationNumber1;
+int RotationNumber2;
+bool ClawOpened(int oldRotation);
+int currentRotation;
+bool ClawClosed(int oldRotation);
+int rotateStateOld = -90;
+int rotateStateNew = 0;
+int counter = 0;
+
+
 
 void pre_auton( void ) {
   // All activities that occur before the competition starts
@@ -85,7 +94,7 @@ void usercontrol( void ) {
     //Brain.Screen.print("User Program has Started.");
 
     while (1){
-
+        task::sleep(50);
         // This is the main execution loop for the user control program.
 
         // Each time through the loop your program should update motor + servo 
@@ -114,7 +123,7 @@ void usercontrol( void ) {
         move2D(MotorSpeed, TurnSpeed);
         
         if (Controller1.ButtonR1.pressing()){
-           PuncherMotor.rotateFor(5.2, vex::rotationUnits::rev, false);
+            PuncherMotor.rotateFor(5.2, vex::rotationUnits::rev, false);
         }
         if (Controller1.ButtonL1.pressing() ) {
             setFrontWheel(-1);
@@ -137,20 +146,40 @@ void usercontrol( void ) {
         if(Controller1.ButtonB.pressing()) {
             handMotion(-handVelocity);
         }
+        
         if(Controller1.ButtonR2.pressing()) {
-            handRotateMotion(handRotateVelocity);
+           // HandRotateMotor.rotateFor(-450,rotationUnits::deg,50,velocityUnits::pct);
+            handRotateMotion();
+       // task::sleep(3000);
         }
-      
-        if(Controller1.ButtonY.pressing() && clawState == 0) {
-            Brain.Screen.print("clawState = " + clawState);
-            clawState = 1;
-            ClawMotor.rotateFor(-clawRotations,vex::rotationUnits::rev,5,velocityUnits::pct);
-        }
-        if(Controller1.ButtonA.pressing() && clawState == 1) {
-            Brain.Screen.print("clawState = " + clawState);            clawState = 0;
-            ClawMotor.rotateFor(clawRotations,vex::rotationUnits::rev,5,velocityUnits::pct);
-
-        }
+        
+        if(Controller1.ButtonY.pressing()) {
+            ClawMotor.rotateFor(0.5,timeUnits::sec,50,velocityUnits::pct);
+            //ClawMotor.spin(directionType::rev,50,velocityUnits::rpm);
+            //ClawMotor.rotateFor(-clawRotations,vex::rotationUnits::rev,20,velocityUnits::pct);
+            currentRotation=(int)ClawMotor.rotation(rotationUnits::deg);
+          //  ClawMotor.setTimeout(0.5,timeUnits::sec);
+/**            if(ClawOpened(currentRotation) == true){
+                ClawMotor.stop();
+                Brain.Screen.newLine();
+                Brain.Screen.printAt(1,40,"Open Stopped");
+            }
+*/        }
+        if(Controller1.ButtonA.pressing()) {
+            ClawMotor.rotateFor(0.5,timeUnits::sec,-50,velocityUnits::pct);
+            ClawMotor.setVelocity(10,velocityUnits::rpm);
+            ClawMotor.spin(directionType::rev);
+            //ClawMotor.spin(directionType::fwd,50,velocityUnits::rpm);
+            //ClawMotor.rotateFor(clawRotations,vex::rotationUnits::rev,20,velocityUnits::pct);
+            currentRotation=(int)ClawMotor.rotation(rotationUnits::deg);
+       //     ClawMotor.setTimeout(1,timeUnits::sec);
+            
+/**            if(ClawClosed(currentRotation) == true){
+                ClawMotor.stop();
+                Brain.Screen.newLine();
+                Brain.Screen.printAt(1,40,"Closed Stopped");
+            }
+*/        }
         
         // ........................................................................
 
@@ -240,8 +269,103 @@ void handMotion(int handPower){
 
 }
 
-void handRotateMotion(int handRotatePower){
-    HandRotateMotor.setVelocity(handRotatePower, vex::velocityUnits::pct);
-    HandRotateMotor.spin(vex::directionType::fwd);
+void handRotateMotion(){
+    
+     if (rotateStateNew==0) 
+    {   
+        if (rotateStateOld==90)
+        {
+        HandRotateMotor.rotateFor(-450,rotationUnits::deg,80,velocityUnits::pct);
+            rotateStateOld=0;
+            rotateStateNew=-90;
+        }
+         else  // -90
+         {
+        HandRotateMotor.rotateFor(450,rotationUnits::deg,80,velocityUnits::pct);
+             rotateStateOld=0;
+             rotateStateNew=90;
+         }
+         
+    }
+    else if (rotateStateNew==90)
+    {
+        HandRotateMotor.rotateFor(-450,rotationUnits::deg,80,velocityUnits::pct);
+        rotateStateOld=90;
+        rotateStateNew=0;
+    }
+    else if (rotateStateNew==-90)
+    {
+        HandRotateMotor.rotateFor(450,rotationUnits::deg,80,velocityUnits::pct);
+        rotateStateOld=-90;
+        rotateStateNew=0;
+    }
+    Brain.Screen.clearScreen();
+    Brain.Screen.printAt(1,41,"old=%d",rotateStateOld);
+   Brain.Screen.printAt(1,91,"new=%d",rotateStateNew);
+   return;
+    counter +=1;
+    Brain.Screen.newLine();
+    Brain.Screen.print(0);
+    if (rotateStateOld == 0 && rotateStateNew == 90){
+        Brain.Screen.newLine();
+        Brain.Screen.print("1");
+        HandRotateMotor.rotateFor(-450,rotationUnits::deg,50,velocityUnits::pct);
+        rotateStateOld = rotateStateNew;
+        rotateStateNew -= 90;
+        return;
+    }
+    
+    if (rotateStateOld == 0 && rotateStateNew == -90){
+        Brain.Screen.newLine();
+        Brain.Screen.print("2");
+        HandRotateMotor.rotateFor(450,rotationUnits::deg,50,velocityUnits::pct);
+        rotateStateOld = rotateStateNew;
+        rotateStateNew += 90;
+        return;
+    }
+    
+    if (rotateStateOld == 90 && rotateStateNew == 0){
+        Brain.Screen.newLine();
+        Brain.Screen.print("3");
+        HandRotateMotor.rotateFor(-450,rotationUnits::deg,50,velocityUnits::pct);
+        rotateStateOld = rotateStateNew;
+        rotateStateNew -= 90;
+        return;
+    }
+    
+    if (rotateStateOld == -90 && rotateStateNew == 0){
+        Brain.Screen.newLine();
+        Brain.Screen.print("4");
+        HandRotateMotor.rotateFor(450,rotationUnits::deg,50,velocityUnits::pct);
+        rotateStateOld = rotateStateNew;
+        rotateStateNew += 90;
+        return;
+    }
+}
 
+bool ClawClosed(int oldRotation){
+    oldRotation=(int)ClawMotor.rotation(rotationUnits::deg);
+    task::sleep(1000);
+    currentRotation=(int)ClawMotor.rotation(rotationUnits::deg);
+    Brain.Screen.newLine();
+    Brain.Screen.printAt(1,42,"oldRotation = ");
+    Brain.Screen.print(oldRotation);
+    Brain.Screen.newLine();
+    Brain.Screen.printAt(20,42,"currentRotation = ");
+    Brain.Screen.print(currentRotation);
+    if (currentRotation==oldRotation)return true;
+    return false;
+}
+
+bool ClawOpened(int oldRotation){
+    oldRotation=(int)ClawMotor.rotation(rotationUnits::deg);
+    task::sleep(1000);
+    currentRotation=(int)ClawMotor.rotation(rotationUnits::deg);
+    Brain.Screen.printAt(1,42,"oldRotation = ");
+    Brain.Screen.print(oldRotation);
+    Brain.Screen.newLine();
+    Brain.Screen.printAt(20,42,"currentRotation = ");
+    Brain.Screen.print(currentRotation);
+    if (currentRotation==oldRotation)return true;
+    return false;
 }
