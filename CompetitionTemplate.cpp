@@ -37,6 +37,10 @@ bool ClawClosed(int oldRotation);
 int rotateStateOld = -90;
 int rotateStateNew = 0;
 int counter = 0;
+int frontState = 0;
+void frontWheelUp();
+void frontWheelDown();
+
 
 
 
@@ -126,15 +130,10 @@ void usercontrol( void ) {
             PuncherMotor.rotateFor(5.2, vex::rotationUnits::rev, false);
         }
         if (Controller1.ButtonL1.pressing() ) {
-            setFrontWheel(-1);
-            //add function
-        }
-       if (!(Controller1.ButtonL1.pressing() )) {
-            setFrontWheel(0);
-            //add function
+            frontWheelUp();
         }
         if (Controller1.ButtonL2.pressing()) {
-            setFrontWheel(1);
+            frontWheelDown();
         }
        
         int armSpeed = Controller1.Axis2.position(percentUnits::pct);
@@ -248,7 +247,7 @@ void move2D(int MotorPower, int TurnPower) {
 }
 
 void setFrontWheel(int frontDirection) {
-    int frontVelocity = -50*frontDirection;
+    int frontVelocity = -100*frontDirection;
     FrontMotor.setVelocity(frontVelocity, vex::velocityUnits::pct);
     FrontMotor.spin(vex::directionType::fwd);
     //FrontMotor.rotateFor(turns, vex::rotationUnits::rev, false);
@@ -368,4 +367,28 @@ bool ClawOpened(int oldRotation){
     Brain.Screen.print(currentRotation);
     if (currentRotation==oldRotation)return true;
     return false;
+}
+
+void frontWheelUp(){
+    
+     if (frontState!=0) 
+     {
+        FrontMotor.rotateFor(1800,rotationUnits::deg,50,velocityUnits::pct);
+        frontState-=1;
+     }
+    Brain.Screen.clearScreen();
+    Brain.Screen.printAt(1,41,"state=%d",frontState);
+    return;
+}
+
+void frontWheelDown(){
+    
+     if (frontState!=4) 
+     {
+        FrontMotor.rotateFor(-1800,rotationUnits::deg,50,velocityUnits::pct);
+        frontState+=1;
+     }
+        Brain.Screen.clearScreen();
+    Brain.Screen.printAt(1,41,"state=%d",frontState);
+    return;
 }
