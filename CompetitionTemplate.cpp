@@ -22,7 +22,7 @@ int FineMotionPower = 30;
 int minTurn = 20;
 int FrontWheelRotation = 5;
 int handRotateVelocity = 50;
-int handVelocity = 50;
+int handVelocity = 0;
 double clawRotations = 0.5;
 void move2D(int MotorPower, int TurnPower);
 void setFrontWheel(int frontDirection);
@@ -40,7 +40,7 @@ int counter = 0;
 int frontState = 0;
 void frontWheelUp();
 void frontWheelDown();
-
+int move();
 
 
 
@@ -48,7 +48,7 @@ void pre_auton( void ) {
   // All activities that occur before the competition starts
   // Example: clearing encoders, setting servo positions, ...
     FrontMotor.setVelocity(50,vex::velocityUnits::pct);
-    FrontMotor.rotateFor(10, vex::rotationUnits::rev, false);
+    FrontMotor.rotateFor(3, vex::rotationUnits::rev, false);
    // ClawMotor.rotateFor(clawRotations, vex::rotationUnits::rev, false);
 
 }
@@ -63,12 +63,14 @@ void pre_auton( void ) {
 /*  You must modify the code to add your own robot specific commands here.   */
 /*---------------------------------------------------------------------------*/
 
+
 void autonomous( void ) {
   // ..........................................................................
   // Insert autonomous user code here.
     //Brain.Screen.print("Autonomous has started.");
   // ..........................................................................
     Brain.Screen.print(Brain.Battery.capacity());
+    vex :: task newtask(move);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -98,6 +100,8 @@ void usercontrol( void ) {
     //Brain.Screen.print("User Program has Started.");
 
     while (1){
+        ArmMotor.setVelocity(2,velocityUnits::rpm);
+        FrontMotor.setVelocity(2,velocityUnits::rpm);
         task::sleep(50);
         // This is the main execution loop for the user control program.
 
@@ -129,10 +133,10 @@ void usercontrol( void ) {
         if (Controller1.ButtonR1.pressing()){
             PuncherMotor.rotateFor(5.2, vex::rotationUnits::rev, false);
         }
-        if (Controller1.ButtonL1.pressing() ) {
+        if (Controller1.ButtonL1.pressing() && FrontMotor.isSpinning() == false ) {
             frontWheelUp();
         }
-        if (Controller1.ButtonL2.pressing()) {
+        if (Controller1.ButtonL2.pressing() && FrontMotor.isSpinning() == false) {
             frontWheelDown();
         }
        
@@ -140,16 +144,19 @@ void usercontrol( void ) {
         armMotion(armSpeed);
         
         if(Controller1.ButtonX.pressing()) {
-            handMotion(handVelocity);
-        }
-        if(Controller1.ButtonB.pressing()) {
-            handMotion(-handVelocity);
+            handVelocity = 50;
         }
         
+        if(Controller1.ButtonB.pressing()) {
+            handVelocity =-50;
+        }
+        handMotion(handVelocity);
+        handVelocity = 0;
+        Brain.Screen.printAt(1,41,"velocity=%d",handVelocity);
         if(Controller1.ButtonR2.pressing()) {
-           // HandRotateMotor.rotateFor(-450,rotationUnits::deg,50,velocityUnits::pct);
+           // HandRotateMotor.rotateFor(-150,rotationUnits::deg,50,velocityUnits::pct);
             handRotateMotion();
-       // task::sleep(3000);
+         // task::sleep(3000);
         }
         
         if(Controller1.ButtonY.pressing()) {
@@ -242,7 +249,6 @@ void move2D(int MotorPower, int TurnPower) {
 
     RightMotor.spin(vex::directionType::fwd);
     
-    
 
 }
 
@@ -274,13 +280,13 @@ void handRotateMotion(){
     {   
         if (rotateStateOld==90)
         {
-        HandRotateMotor.rotateFor(-450,rotationUnits::deg,80,velocityUnits::pct);
+        HandRotateMotor.rotateFor(-150,rotationUnits::deg,80,velocityUnits::pct);
             rotateStateOld=0;
             rotateStateNew=-90;
         }
          else  // -90
          {
-        HandRotateMotor.rotateFor(450,rotationUnits::deg,80,velocityUnits::pct);
+        HandRotateMotor.rotateFor(150,rotationUnits::deg,80,velocityUnits::pct);
              rotateStateOld=0;
              rotateStateNew=90;
          }
@@ -288,13 +294,13 @@ void handRotateMotion(){
     }
     else if (rotateStateNew==90)
     {
-        HandRotateMotor.rotateFor(-450,rotationUnits::deg,80,velocityUnits::pct);
+        HandRotateMotor.rotateFor(-150,rotationUnits::deg,80,velocityUnits::pct);
         rotateStateOld=90;
         rotateStateNew=0;
     }
     else if (rotateStateNew==-90)
     {
-        HandRotateMotor.rotateFor(450,rotationUnits::deg,80,velocityUnits::pct);
+        HandRotateMotor.rotateFor(150,rotationUnits::deg,80,velocityUnits::pct);
         rotateStateOld=-90;
         rotateStateNew=0;
     }
@@ -308,7 +314,7 @@ void handRotateMotion(){
     if (rotateStateOld == 0 && rotateStateNew == 90){
         Brain.Screen.newLine();
         Brain.Screen.print("1");
-        HandRotateMotor.rotateFor(-450,rotationUnits::deg,50,velocityUnits::pct);
+        HandRotateMotor.rotateFor(-150,rotationUnits::deg,50,velocityUnits::pct);
         rotateStateOld = rotateStateNew;
         rotateStateNew -= 90;
         return;
@@ -317,7 +323,7 @@ void handRotateMotion(){
     if (rotateStateOld == 0 && rotateStateNew == -90){
         Brain.Screen.newLine();
         Brain.Screen.print("2");
-        HandRotateMotor.rotateFor(450,rotationUnits::deg,50,velocityUnits::pct);
+        HandRotateMotor.rotateFor(150,rotationUnits::deg,50,velocityUnits::pct);
         rotateStateOld = rotateStateNew;
         rotateStateNew += 90;
         return;
@@ -326,7 +332,7 @@ void handRotateMotion(){
     if (rotateStateOld == 90 && rotateStateNew == 0){
         Brain.Screen.newLine();
         Brain.Screen.print("3");
-        HandRotateMotor.rotateFor(-450,rotationUnits::deg,50,velocityUnits::pct);
+        HandRotateMotor.rotateFor(-150,rotationUnits::deg,50,velocityUnits::pct);
         rotateStateOld = rotateStateNew;
         rotateStateNew -= 90;
         return;
@@ -335,7 +341,7 @@ void handRotateMotion(){
     if (rotateStateOld == -90 && rotateStateNew == 0){
         Brain.Screen.newLine();
         Brain.Screen.print("4");
-        HandRotateMotor.rotateFor(450,rotationUnits::deg,50,velocityUnits::pct);
+        HandRotateMotor.rotateFor(150,rotationUnits::deg,50,velocityUnits::pct);
         rotateStateOld = rotateStateNew;
         rotateStateNew += 90;
         return;
@@ -373,8 +379,9 @@ void frontWheelUp(){
     
      if (frontState!=0) 
      {
-        FrontMotor.rotateFor(1800,rotationUnits::deg,50,velocityUnits::pct);
-        frontState-=1;
+        FrontMotor.setVelocity(50,vex::velocityUnits::pct);
+        FrontMotor.rotateFor(1.5, vex::rotationUnits::rev, false);
+         frontState-=1;
      }
     Brain.Screen.clearScreen();
     Brain.Screen.printAt(1,41,"state=%d",frontState);
@@ -383,12 +390,21 @@ void frontWheelUp(){
 
 void frontWheelDown(){
     
-     if (frontState!=4) 
+     if (frontState!=8) 
      {
-        FrontMotor.rotateFor(-1800,rotationUnits::deg,50,velocityUnits::pct);
-        frontState+=1;
+        FrontMotor.setVelocity(50,vex::velocityUnits::pct);
+        FrontMotor.rotateFor(-1.5, vex::rotationUnits::rev, false);
+         frontState+=1;
      }
         Brain.Screen.clearScreen();
     Brain.Screen.printAt(1,41,"state=%d",frontState);
     return;
+}
+
+int move() {
+  while(1) {
+      LeftMotor.rotateFor(2,timeUnits::sec,50,velocityUnits::pct);
+      RightMotor.rotateFor(2,timeUnits::sec,50,velocityUnits::pct);
+  }
+    return 0;
 }
