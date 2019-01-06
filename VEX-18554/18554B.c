@@ -51,7 +51,8 @@
 	void moveForwardDistanceInch(float distance_Left, float distance_Right,int power);
 	void moveTurnRightDegree(int turnDegree,int power);
 	void moveTurnRightDistanceInch(float distance_Left, float distance_Right,int power);
-
+	bool stop;
+	int puncherPower = 0;
 
 
 
@@ -140,6 +141,8 @@ task usercontrol()
 
 	while(true)
 	{
+
+
 		DisplayData();
 		int verticalPower = vexRT[Ch3]; // get joystick value for right vertical channel
 		int horizontalPower = vexRT[Ch4]; // get joystick value for left vertical channel
@@ -172,15 +175,26 @@ task usercontrol()
 			state6D += 1;
 		}
 
-		if(vexRT[Btn5D]) {
-				motor[puncherMotor8CY] = 40;
+		if (stop == true){
+				if(vexRT[Btn5D]) {
+				puncherPower = 40;
 			}
 
-		if(vexRT[Btn5U]) {
-			motor[puncherMotor8CY] = -40;
-				}
+			if(vexRT[Btn5U]) {
+				puncherPower = -40;
+			}
 
-			if(SensorValue[puncherStop]==1){motor[puncherMotor8CY] = 0;}
+			if(SensorValue[puncherStop]==1){stop = false;}
+		}
+		else{
+			if(SensorValue[puncherStop]){puncherPower = 0;}
+			else if(vexRT[Btn5D]){puncherPower = 40;}
+			else if(vexRT[Btn5U]) {
+				puncherPower = -40;
+			}
+		}
+
+		motor[puncherMotor8CY] = puncherPower;
 }
 }
 
@@ -270,6 +284,7 @@ void moveForwardDistanceInch(float distance_Left, float distance_Right,int power
 	}
   move2D(0,0);
 }
+
 void moveTurnRightDegree(int turnDegree,int power)
 {
 	float turnDistance=3.14*turnDiameter*turnDegree/360;
