@@ -175,7 +175,7 @@ task usercontrol()
 			state6D += 1;
 		}
 
-		if (stop == true){
+		if (stop){
 				if(vexRT[Btn5D]) {
 				puncherPower = 40;
 			}
@@ -184,10 +184,11 @@ task usercontrol()
 				puncherPower = -40;
 			}
 
-			if(SensorValue[puncherStop]==1){stop = false;}
+			if(SensorValue[puncherStop]==0){stop = false;
+				wait1Msec(50);}
 		}
 		else{
-			if(SensorValue[puncherStop]){puncherPower = 0;}
+			if(SensorValue[puncherStop] == 1){puncherPower = 0; stop = true;}
 			else if(vexRT[Btn5D]){puncherPower = 40;}
 			else if(vexRT[Btn5U]) {
 				puncherPower = -40;
