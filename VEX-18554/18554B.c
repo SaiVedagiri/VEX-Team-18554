@@ -51,7 +51,7 @@
 	void moveForwardDistanceInch(float distance_Left, float distance_Right,int power);
 	void moveTurnRightDegree(int turnDegree,int power);
 	void moveTurnRightDistanceInch(float distance_Left, float distance_Right,int power);
-	bool stop;
+	bool stop = true;
 	int puncherPower = 0;
 
 
