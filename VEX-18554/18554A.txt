@@ -1,0 +1,536 @@
+#include "robot-config.h"
+/*---------------------------------------------------------------------------*/
+/*                                                                           */
+/*        Description: Competition template for VCS VEX V5                   */
+/*                                                                           */
+/*---------------------------------------------------------------------------*/
+
+//Creates a competition object that allows access to Competition methods.
+vex::competition    DriverControl;
+
+/*---------------------------------------------------------------------------*/
+/*                          Pre-Autonomous Functions                         */
+/*                                                                           */
+/*  You may want to perform some actions before the competition starts.      */
+/*  Do them in the following function.  You must return from this function   */
+/*  or the autonomous and usercontrol tasks will not be started.  This       */
+/*  function is only called once after the cortex has been powered on and    */
+/*  not every time that the robot is disabled.                               */
+/*---------------------------------------------------------------------------*/
+
+int FineMotionPower = 30;
+int minTurn = 20;
+void move2D(int MotorPower, int TurnPower);
+void moveForwardByTurns(double leftMotorTurns, double rightMotorTurns, int motorPower, bool ifWait);
+void moveForwardByInches(double leftMotorInches, double rightMotorInches, int motorPower, bool ifWait);
+void moveForwardDistanceInchWait(double distance_Left, double distance_Right,int power);
+void moveRightDegreeWait(double degree, int power);
+void increament_score_mode();
+void display_score_mode();
+void auto_1_red_front();
+void auto_2_blue_front();
+void auto_3_red_back();
+void auto_4_blue_back();
+void go_auto();
+double Inches2Turns=(10.0/53)*(5.25/4.25)*(40/42.0);
+double frontSonar = 0, rightSonar = 0;
+int sonarMin = 19;
+int score_mode=0;  
+double Lencode,Rencode;
+double Lrotation, Rrotation;
+int sysTime;
+void moveWall(double distSide, double velocity, double distFront);
+double diffRight = 0;
+double diffRightFront = 0;
+double diffRightBack = 0;
+int inLoop = 0;
+double distFrontGlobal = 2;
+double gyroVal = 0;
+void moveWallGyro(double distSide, double velocity, double distFront);
+int diffVar = 0;
+void driverAssist(double distSide);
+
+
+void pre_auton( void ) {
+ /*   FrontMotor.setVelocity(50,vex::velocityUnits::pct);
+    FrontMotor.rotateFor(3.7, vex::rotationUnits::rev, false);
+
+    vex::task::sleep(2500);
+         FrontMotor.setVelocity(100,vex::velocityUnits::pct);
+            FrontMotor.rotateFor(-0.5, vex::rotationUnits::rev, false);
+           
+             PuncherMotor.rotateFor(2.4, vex::rotationUnits::rev, true);
+    ArmMotor.setVelocity(2,velocityUnits::pct);
+    FrontMotor.setVelocity(2,velocityUnits::pct);
+    */
+}
+
+/*---------------------------------------------------------------------------*/
+/*                                                                           */
+/*                              Autonomous Task                              */
+/*                                                                           */
+/*  This task is used to control your robot during the autonomous phase of   */
+/*  a VEX Competition.                                                       */
+/*                                                                           */
+/*  You must modify the code to add your own robot specific commands here.   */
+/*---------------------------------------------------------------------------*/
+
+
+void autonomous( void ) {
+    Brain.Screen.print("Autonomous has started. score_mode= %d ", score_mode);
+    score_mode = 0;
+    go_auto();
+    return;
+  
+}
+
+
+/*----------------------------------------------------------------------------*/
+/*                                                                            */
+/*                              User Control Task                             */
+/*                                                                            */
+/*  This task is used to control your robot during the user control phase of  */
+/*  a VEX Competition.                                                        */
+/*                                                                            */
+/*  You must modify the code to add your own robot specific commands here.    */
+/*----------------------------------------------------------------------------*/
+
+void usercontrol( void ) {
+    Brain.resetTimer();
+    
+    vex::task::sleep(2000);
+//    score_mode = 2;
+//   go_auto();
+//    return;
+    LeftMotor.stop(brakeType::hold);
+    RightMotor.stop(brakeType::hold);
+ //   inLoop=99;
+     while (1){
+         sysTime=Brain.timer(timeUnits::sec);
+         
+        task::sleep(10);
+     //   ArmMotor.setVelocity(2,velocityUnits::pct);
+     //   FrontMotor.setVelocity(1,velocityUnits::pct);
+        frontSonar = SonarFront.distance(distanceUnits::in);
+        rightSonar = SonarRight.distance(distanceUnits::in);
+         gyroVal = Gyro1.value(rotationUnits::deg);
+        display_score_mode();
+        int MotorSpeed = Controller1.Axis3.position(percentUnits::pct);
+        int TurnSpeed = Controller1.Axis4.position(percentUnits::pct);
+        Controller1.ButtonUp.pressed(increament_score_mode);
+         
+        if (Controller1.ButtonUp.pressing()){     
+            if (frontSonar < sonarMin && frontSonar > 1){MotorSpeed=0;}
+            else{
+            MotorSpeed += FineMotionPower;
+            }
+        }
+        if (Controller1.ButtonLeft.pressing()){
+           TurnSpeed -= FineMotionPower;
+        }
+        
+        if (Controller1.ButtonRight.pressing()){
+           TurnSpeed += FineMotionPower;
+        }
+        
+        if (Controller1.ButtonDown.pressing()){
+           MotorSpeed -= FineMotionPower;
+        }        
+        
+         if (Controller1.ButtonA.pressing()){
+             driverAssist(10);
+         }
+         else{
+        move2D(MotorSpeed, TurnSpeed);
+         }
+
+
+        // ........................................................................
+
+        // Insert user code here. This is where you use the joystick values to 
+        // update your motors, etc.
+
+        // ........................................................................
+
+        vex::task::sleep(20); //Sleep the task for a short amount of time to prevent wasted resources. 
+    
+    }
+}
+
+
+//
+// Main will set up the competition functions and callbacks.
+//
+int main() {
+    
+    //Run the pre-autonomous function. 
+    pre_auton();
+    
+    //Set up callbacks for autonomous and driver control periods.
+    Competition.autonomous( autonomous );
+    
+
+    Competition.drivercontrol( usercontrol );
+
+    //Prevent main from exiting with an infinite loop.                        
+    while(1) {
+      vex::task::sleep(100);//Sleep the task for a short amount of time to prevent wasted resources.
+    }    
+       
+}
+
+void move2D(int MotorPower, int TurnPower) {
+
+    // Set the power of the motor
+    if (abs(TurnPower) > minTurn) {
+        TurnPower -= abs(TurnPower)/TurnPower *minTurn;
+    }
+    else TurnPower = 0;
+    
+   // TurnPower /=2;
+    int leftPower = MotorPower + TurnPower;
+    int rightPower = MotorPower - TurnPower;
+    if (abs(leftPower)> 100){
+        leftPower = 100*(leftPower/abs(leftPower));
+    }
+    if (abs(rightPower) > 100) {
+        rightPower = 100*(rightPower/abs(rightPower));
+    }
+    
+    LeftMotor.setVelocity(leftPower, vex::velocityUnits::pct);
+    FrontLeftMotor.setVelocity(leftPower, vex::velocityUnits::pct);
+    RightMotor.setVelocity(rightPower, vex::velocityUnits::pct);
+    FrontRightMotor.setVelocity(rightPower, vex::velocityUnits::pct);
+    
+    // Set the direction of the motor spin
+
+    LeftMotor.spin(vex::directionType::fwd);
+    FrontLeftMotor.spin(vex::directionType::fwd);
+    RightMotor.spin(vex::directionType::fwd);
+    FrontRightMotor.spin(vex::directionType::fwd);
+
+}
+
+
+void moveForward(int MotorPower, int TurnPower) {
+
+    // Set the power of the motor
+    int leftPower = MotorPower + TurnPower;
+    int rightPower = MotorPower - TurnPower;
+    if (abs(leftPower)> 100){
+        leftPower = 100*(leftPower/abs(leftPower));
+    }
+    if (abs(rightPower) > 100) {
+        rightPower = 100*(rightPower/abs(rightPower));
+    }
+    
+    LeftMotor.setVelocity(leftPower, vex::velocityUnits::pct);
+    FrontLeftMotor.setVelocity(leftPower, vex::velocityUnits::pct);
+    RightMotor.setVelocity(rightPower, vex::velocityUnits::pct);
+    FrontRightMotor.setVelocity(rightPower, vex::velocityUnits::pct);
+    
+    
+    // Set the direction of the motor spin
+
+    LeftMotor.spin(vex::directionType::fwd);
+    FrontLeftMotor.spin(vex::directionType::fwd);
+    RightMotor.spin(vex::directionType::fwd);
+    FrontRightMotor.spin(vex::directionType::fwd);
+
+}
+
+void moveForwardFront(int MotorPower, int TurnPower) {
+
+    // Set the power of the motor
+    int leftPower = MotorPower + TurnPower;
+    int rightPower = MotorPower - TurnPower;
+    if (abs(leftPower)> 100){
+        leftPower = 100*(leftPower/abs(leftPower));
+    }
+    if (abs(rightPower) > 100) {
+        rightPower = 100*(rightPower/abs(rightPower));
+    }
+    
+    FrontLeftMotor.setVelocity(leftPower, vex::velocityUnits::pct);
+    FrontRightMotor.setVelocity(rightPower, vex::velocityUnits::pct);
+    
+    
+    // Set the direction of the motor spin
+
+    FrontLeftMotor.spin(vex::directionType::fwd);
+    FrontRightMotor.spin(vex::directionType::fwd);
+    
+
+}
+
+void moveForwardBack(int MotorPower, int TurnPower) {
+
+    // Set the power of the motor
+    int leftPower = MotorPower + TurnPower;
+    int rightPower = MotorPower - TurnPower;
+    if (abs(leftPower)> 100){
+        leftPower = 100*(leftPower/abs(leftPower));
+    }
+    if (abs(rightPower) > 100) {
+        rightPower = 100*(rightPower/abs(rightPower));
+    }
+    
+    LeftMotor.setVelocity(leftPower, vex::velocityUnits::pct);
+    RightMotor.setVelocity(rightPower, vex::velocityUnits::pct);
+    
+    
+    // Set the direction of the motor spin
+
+    LeftMotor.spin(vex::directionType::fwd);
+    RightMotor.spin(vex::directionType::fwd);
+
+}
+
+
+void moveForwardByTurns(double leftMotorTurns, double rightMotorTurns, int motorPower, bool ifWait)
+{
+    RightMotor.setVelocity(motorPower, velocityUnits::pct);             //Sets up Right Speed
+    FrontRightMotor.setVelocity(motorPower, velocityUnits::pct);             //Sets up Right Speed
+    LeftMotor.setVelocity(motorPower, velocityUnits::pct);              //Sets up Left Speed
+    FrontLeftMotor.setVelocity(motorPower, velocityUnits::pct);              //Sets up Left Speed
+    if (ifWait)
+    {
+      if (fabs(leftMotorTurns)>fabs(rightMotorTurns)) // left motor wait
+          {
+            RightMotor.rotateFor(rightMotorTurns, vex::rotationUnits::rev, false);   //Moves the Right forward
+          FrontRightMotor.rotateFor(rightMotorTurns, vex::rotationUnits::rev, false);   //Moves the Right forward
+            LeftMotor.rotateFor(leftMotorTurns, vex::rotationUnits::rev, true);   //Moves the Left Forward        
+            FrontLeftMotor.rotateFor(leftMotorTurns, vex::rotationUnits::rev, true);   //Moves the Left Forward                 
+          }
+          else  //right motor wait
+          {
+            LeftMotor.rotateFor(leftMotorTurns, vex::rotationUnits::rev, false);   //Moves the Left Forward   
+            FrontLeftMotor.rotateFor(leftMotorTurns, vex::rotationUnits::rev, false);   //Moves the Left Forward                              
+            RightMotor.rotateFor(rightMotorTurns, vex::rotationUnits::rev, true);   //Moves the Right forward
+            FrontRightMotor.rotateFor(rightMotorTurns, vex::rotationUnits::rev, true);   //Moves the Right forward
+          }
+    }
+    else  // both no wait
+    {
+    RightMotor.rotateFor(rightMotorTurns, vex::rotationUnits::rev, false);   //Moves the Right forward
+    FrontRightMotor.rotateFor(rightMotorTurns, vex::rotationUnits::rev, false);   //Moves the Right forward
+
+    LeftMotor.rotateFor(leftMotorTurns, vex::rotationUnits::rev, false);   //Moves the Left Forward     
+    FrontLeftMotor.rotateFor(leftMotorTurns, vex::rotationUnits::rev, false);   //Moves the Left Forward               
+
+     }
+}
+
+void display_score_mode()
+{
+    int lineNumber=161;
+    int battery=Brain.Battery.capacity(percentUnits::pct);
+            Brain.Screen.printAt(300,21,"battery pct %d   ",battery);
+            Brain.Screen.printAt(9,21,"frontSonar (in) = %.4f   ",frontSonar);
+            Brain.Screen.printAt(9,41,"rightSonar (in) = %.4f   ",rightSonar);
+            Brain.Screen.printAt(9,61,"Lencode =%.4f  ", Lencode);
+            Brain.Screen.printAt(300,61,"Rencode =%.4f  ", Rencode);
+            Brain.Screen.printAt(9,81,"Lrotation =%.4f ", Lrotation);
+            Brain.Screen.printAt(300,81,"Rrotation =%.4f  ", Rrotation);
+            Brain.Screen.printAt(9,121,"score_mode=%d  ", score_mode);
+    Brain.Screen.printAt(9,101, "diffRight = %.4f", diffRight);
+        Brain.Screen.printAt(9,181, "gyroVal = %.4f", gyroVal);
+
+    Brain.Screen.printAt(9, 141, "timer = %d", sysTime);
+
+    switch (score_mode) {
+        case 0:  
+            Brain.Screen.setPenColor(white);
+            Brain.Screen.printAt(9,lineNumber,"score mode = No Autonomous   ");
+            Brain.Screen.setPenColor(white);
+            break;
+        case 1:  
+            Brain.Screen.setPenColor(red);
+            Brain.Screen.printAt(9,lineNumber,"score mode = Red Front     ");
+            Brain.Screen.setPenColor(white);
+            break;
+        case 2:  
+            Brain.Screen.setPenColor(blue);
+            Brain.Screen.printAt(9,lineNumber,"score mode = blue Front    ");
+            Brain.Screen.setPenColor(white);
+            break;
+        case 3:  
+            Brain.Screen.setPenColor(red);
+            Brain.Screen.printAt(9,lineNumber,"score mode = Red Back     ");
+            Brain.Screen.setPenColor(white);
+            break;
+        case 4:  
+            Brain.Screen.setPenColor(blue);
+            Brain.Screen.printAt(9,lineNumber,"score mode = Blue Back    ");
+            Brain.Screen.setPenColor(white);
+            break;
+    }
+}
+void increament_score_mode()
+{ 
+        score_mode++;
+        if (score_mode==5) score_mode=0;
+}
+
+void go_auto()
+{
+    int t=0;
+    Brain.resetTimer();
+    Brain.Screen.clearScreen();
+  //  score_mode=0;
+    switch (score_mode) {
+        case 0: return; // no autonomus mode
+                break;
+        case 1: auto_1_red_front();
+                break;
+        case 2: auto_2_blue_front();
+                break;
+        case 3: auto_3_red_back();
+                break;
+        case 4: auto_4_blue_back();
+                break;         
+    }
+    t=Brain.timer(timeUnits::msec);
+    Brain.Screen.printAt(300, 200, "timer = %d   ",t );
+}
+
+void auto_1_red_front()
+{
+  
+}
+void auto_2_blue_front()
+{
+    moveWallGyro(10,-30,50);
+}
+void auto_3_red_back()
+{
+    moveWallGyro(10,30,15);
+}
+void auto_4_blue_back()
+{
+}
+
+
+void moveForwardDistanceInchWait(double distance_Left, double distance_Right,int power)
+{
+	double leftTravel_loc,rightTravel_loc,diff;
+	double left2right_ratio=distance_Left/distance_Right;
+    RightMotor.resetRotation();
+    FrontRightMotor.resetRotation();
+    LeftMotor.resetRotation(); 
+    FrontLeftMotor.resetRotation();     /* Clear the encoders for    */
+	moveForward(power,0);
+	//wait for travel distance of Inch, then Stop
+	while (true)
+	{
+ 		Lencode=fabs(LeftMotor.rotation(rotationUnits::rev))/Inches2Turns; //inches
+		Rencode=fabs(RightMotor.rotation(rotationUnits::rev))/Inches2Turns;
+
+			leftTravel_loc=Lencode;
+			rightTravel_loc=Rencode;
+			diff=Lencode-Rencode*left2right_ratio;	
+		if (fabs(leftTravel_loc)>distance_Left)	break;
+		if (fabs(rightTravel_loc)>distance_Right)	break;
+		moveForward(power,-diff*50*power/fabs(power+0.001));
+	}
+	moveForward(0,0);
+}
+
+void moveRightDegreeWait(double degree, int power)
+{
+    double RobotWheelwidth=18.0; //inches
+    double distance_Left=RobotWheelwidth*3.14*degree/360;
+    double distance_Right=RobotWheelwidth*3.14*degree/360;
+	double leftTravel_loc,rightTravel_loc,diff;
+	double left2right_ratio=distance_Left/distance_Right;
+    RightMotor.resetRotation();
+    FrontRightMotor.resetRotation();
+    LeftMotor.resetRotation(); 
+    FrontLeftMotor.resetRotation();      /* Clear the encoders for    */
+	moveForward(0,power);  // move circle to right
+	//wait for travel distance of Inch, then Stop
+	while (true)
+	{
+ 		Lencode=fabs(LeftMotor.rotation(rotationUnits::rev))/Inches2Turns; //inches
+		Rencode=fabs(RightMotor.rotation(rotationUnits::rev))/Inches2Turns;
+
+			leftTravel_loc=Lencode;
+			rightTravel_loc=Rencode;
+			diff=Lencode-Rencode*left2right_ratio;	
+		if (fabs(leftTravel_loc)>distance_Left)	break;
+		if (fabs(rightTravel_loc)>distance_Right)	break;
+		moveForward(-diff*50*power/fabs(power+0.001), power);
+	}
+	moveForward(0,0);
+}
+
+void moveWallGyro(double distSide, double velocity, double distFront){
+    frontSonar = SonarFront.distance(distanceUnits::in);
+    rightSonar = SonarRight.distance(distanceUnits::in);
+    gyroVal = Gyro1.value(rotationUnits::deg);
+    while(true){
+        frontSonar = SonarFront.distance(distanceUnits::in);
+        rightSonar = SonarRight.distance(distanceUnits::in);
+        gyroVal = Gyro1.value(rotationUnits::deg);
+        inLoop = 413;
+        display_score_mode();
+        if (velocity > 0){
+        if(fabs(frontSonar) < distFront){
+            break;}
+        }
+        if (velocity < 0){
+        if(fabs(frontSonar) > distFront){
+            break;}
+        }
+		diffRightFront = -gyroVal;
+		diffRightBack = 10*(rightSonar - distSide);
+		moveForwardFront(velocity,diffRightFront);
+		moveForwardBack(velocity,diffRightBack*velocity/fabs(velocity+0.0001));
+    }
+    display_score_mode();
+        LeftMotor.stop(brakeType::brake);
+    RightMotor.stop(brakeType::brake);
+    FrontLeftMotor.stop(brakeType::brake);
+    FrontRightMotor.stop(brakeType::brake);
+    inLoop = 399;
+}
+
+void moveWall(double distSide, double velocity, double distFront){
+    frontSonar = SonarFront.distance(distanceUnits::in);
+    rightSonar = SonarRight.distance(distanceUnits::in);
+    while(true){
+        frontSonar = SonarFront.distance(distanceUnits::in);
+        rightSonar = SonarRight.distance(distanceUnits::in);
+        inLoop = 672;
+        display_score_mode();
+        if (velocity > 0){
+        if(fabs(frontSonar) < distFront){
+            break;}
+        }
+        if (velocity < 0){
+        if(fabs(frontSonar) > distFront){
+            break;}
+        }
+		diffRight = 10*(rightSonar - distSide);
+		moveForwardFront(velocity,0);
+		moveForwardBack(velocity,diffRight*velocity/fabs(velocity+0.0001));
+    }
+    display_score_mode();
+        LeftMotor.stop(brakeType::brake);
+    RightMotor.stop(brakeType::brake);
+    FrontLeftMotor.stop(brakeType::brake);
+    FrontRightMotor.stop(brakeType::brake);
+    inLoop = 725;
+}
+
+void driverAssist(double distSide){
+    int MotorSpeed = Controller1.Axis3.position(percentUnits::pct);
+    rightSonar = SonarRight.distance(distanceUnits::in);
+    gyroVal = Gyro1.value(rotationUnits::deg);
+    inLoop = 727;
+    display_score_mode();
+		diffRightFront = -gyroVal;
+		diffRightBack = 10*(rightSonar - distSide);
+		moveForwardFront(MotorSpeed,diffRightFront);
+		moveForwardBack(MotorSpeed,diffRightBack*MotorSpeed/fabs(MotorSpeed+0.0001));
+}
