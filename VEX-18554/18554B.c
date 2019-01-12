@@ -51,16 +51,25 @@
 	void moveForwardDistanceInch(float distance_Left, float distance_Right,int power);
 	void moveTurnRightDegree(int turnDegree,int power);
 	void moveTurnRightDistanceInch(float distance_Left, float distance_Right,int power);
-//	bool stop = true;
-//	int puncherPower = 0;
+	void moveRollers();
+	int Roller_InPower=0;
+	int Roller_InPowerLevelMax=100;
+	int Roller_InPowerLevel=Roller_InPowerLevelMax;
+	int Roller_UpPower=0;
+	int Roller_UpPowerLevelMax=100;
+	int Roller_UpPowerLevel=Roller_UpPowerLevelMax;
+	int Btn6D_pressed=0;
+	int Btn6U_pressed=0;
 	int PunchState=0;  // S=1, P=0
 	int PunchPower=0;
 	int PunchPowerMax=30;
 	int PunchPowerHold=5;
 	bool PunchTriggerred=false;
 	bool PunchTriggerAuto=false;
+	bool PunchTriggerReady=false;
 	int PunchShotStop=0;
 	task PunchStateMachine();
+	task LCDLEDStateMachine();
 	int GyroTop=0;
 	int GyroBot=0;
 	float GyroBalance=1.3;
@@ -153,6 +162,7 @@ task usercontrol()
 	score_mode=-1;
 
 	startTask(PunchStateMachine);
+	startTask(LCDLEDStateMachine);
 	while(true)
 	{
 
@@ -162,32 +172,41 @@ task usercontrol()
 		int horizontalPower = vexRT[Ch4]; // get joystick value for left vertical channel
 
 		move2D(verticalPower, horizontalPower);
+		moveRollers();
 
-		if(vexRT[Btn6U]){
-			if(state6U % 2 == 0){
-					motor[rollerUp5] = 70;
+	if (vexRT[Btn6D]==1)
+  		{
+  		Btn6D_pressed=1;
+  		//Roller_InPowerLevel*= -1;  // + In, - out
+  		Roller_InPower=	Roller_InPowerLevel;
+  		turnLEDOn(puncherLED);
 			}
-			if(state6U % 2 == 1){
-		  		motor[rollerUp5] = 0;
-		  		motor[rollerIn4] = 0;
-			}
-
-			wait1Msec(500);
-			state6U += 1;
-		}
-
-
-		if(vexRT[Btn6D]) {
-			if(state6D % 2 == 0){
-					motor[rollerIn4] = 70;
-			}
-			if(state6D % 2 == 1){
-		  		motor[rollerIn4] = -70;
+			else     //6D ==0
+			{
+				if (Btn6D_pressed==1)  Roller_InPowerLevel*= -1;  // + in, - Out
+				Btn6D_pressed=0;
 			}
 
-			wait1Msec(500);
-			state6D += 1;
-		}
+	if (vexRT[Btn6U]==1)
+  		{
+  		Btn6U_pressed=1;
+  		Roller_UpPower=	Roller_UpPowerLevel;
+  		if (Roller_UpPower==0)
+  				{
+  					Roller_InPower=0;
+  					Roller_InPowerLevel	= Roller_InPowerLevelMax;
+  					turnLEDOff(puncherLED);
+  				}
+			}
+			else     //6U ==0
+			{
+				if (Btn6U_pressed==1)
+					{
+						Roller_UpPowerLevel=Roller_UpPowerLevelMax-Roller_UpPower;
+					}
+				Btn6U_pressed=0;
+			}
+
 /*
 		if (stop){
 				if(vexRT[Btn5D]) {
@@ -211,7 +230,10 @@ task usercontrol()
 
 		motor[puncherMotor8CY] = puncherPower;
 		*/
-}
+
+		move2D(verticalPower, horizontalPower);
+		moveRollers();
+	}
 }
 
 	void move2D(int motorPower, int turnPower){
@@ -235,6 +257,19 @@ task usercontrol()
     motor[leftRearMotor9D] = leftPower;
 
 	}
+
+void moveRollers()
+{
+	motor[rollerIn4]=Roller_InPower;
+	motor[rollerUp5]=Roller_UpPower;
+	motor[intakeBottomMotor6]=Roller_UpPower;
+}
+
+task LCDLEDStateMachine()
+	{
+		DisplayData();
+	}
+	;
 
 /*
 	void DisplayData()
@@ -386,32 +421,41 @@ task PunchStateMachine()
 			if (vexRT(Btn5D)==1) PunchTriggerred=true;
 		switch (PunchState)
 			{
-				case 0: // intit, S=1, P=0
-//					if (PunchShotStop==0&&PunchPower==0) break;  // free stand punch
+				case 0: // intit, S=undefined, P=0
+					PunchTriggerReady=false;
 					PunchPower=PunchPowerMax;
-					PunchState++;
+					if( PunchShotStop)
+					{
+						PunchPower=0;  //stop at init position
+						PunchState++;
+					}
+			// stay in init position, if no trigger not ready
 					break;
 				case 1: //s=1
-					if (PunchTriggerred)PunchPower=PunchPowerMax;
- 					if (PunchTriggerAuto)PunchPower=PunchPowerMax; // init Auto trigger
-//					PunchTriggerAuto=false; //reset trigger
+					PunchTriggerReady=false;
+					if (PunchTriggerred||PunchTriggerAuto)
+							PunchPower=PunchPowerMax; // power up to hold position
 					if (PunchShotStop==0) PunchState++; //Power continue until S=0
 					break;
 				case	2:
 					wait1Msec(3000);		//S=0
-//					if (PunchShotStop==1) PunchPower=0; //emergency stop
 					PunchPower=PunchPowerHold;  //hold the punch, S=0
+					PunchTriggerAuto=false; // clear any trigger
+					PunchTriggerred=false;
 					PunchState++;
 					break;
 			case 3:
 
-//					if (PunchShotStop==1) PunchPower=0; //emergency stop
 					if (PunchTriggerred||PunchTriggerAuto) // 5d or auto trigger
 					{
 					PunchPower=PunchPowerMax; //fire
-					PunchTriggerAuto=false; //reset
+					PunchTriggerAuto=false; //reset trigger
 					PunchTriggerred=false;
-					}  //else wait for shot
+					} else
+					{
+					PunchTriggerReady=true;
+					}
+					//else wait for shot
 					if (PunchShotStop==1) PunchState=1; //return to 1
 					break;
 				default: break;
