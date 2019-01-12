@@ -1,14 +1,15 @@
 #pragma config(Sensor, in1,    Potent,         sensorPotentiometer)
 #pragma config(Sensor, in2,    PotHand,        sensorPotentiometer)
+#pragma config(Sensor, in6,    Expander,       sensorAnalog)
 #pragma config(Sensor, in7,    GyroBot7,       sensorGyro)
 #pragma config(Sensor, in8,    GyroTop8,       sensorGyro)
-#pragma config(Sensor, dgtl1,  frontSonic,     sensorSONAR_inch)
+#pragma config(Sensor, dgtl1,  frontSonic,     sensorSONAR_mm)
 #pragma config(Sensor, dgtl3,  leftEncoder,    sensorQuadEncoder)
-#pragma config(Sensor, dgtl5,  leftSonic,      sensorSONAR_inch)
+#pragma config(Sensor, dgtl5,  leftSonic,      sensorSONAR_mm)
 #pragma config(Sensor, dgtl7,  puncherLED,     sensorLEDtoVCC)
 #pragma config(Sensor, dgtl8,  puncherStop,    sensorTouch)
 #pragma config(Sensor, dgtl9,  rightEncoder,   sensorQuadEncoder)
-#pragma config(Sensor, dgtl11, rightSonic,     sensorSONAR_inch)
+#pragma config(Sensor, dgtl11, rightSonic,     sensorSONAR_mm)
 #pragma config(Motor,  port1,           rightFrontMotor1, tmotorVex393_HBridge, openLoop, driveRight)
 #pragma config(Motor,  port2,           leftFrontMotor2A, tmotorVex393_MC29, openLoop, driveRight)
 #pragma config(Motor,  port3,           frontWheelLift3BY, tmotorVex393_MC29, openLoop)
@@ -76,6 +77,11 @@
 	float Gyro_Cali=-0.5/1.10;
 	int GyroAngle=0;
 	int MoveFaceForward=1;
+	int FrontSonar_mm=0;
+	int RightSonar_mm=0;
+	int LeftSonar_mm=0;
+	int HighFlag_mm=0;
+	int MiddleFlag_mm=0;
 
 
 
@@ -214,29 +220,6 @@ task usercontrol()
 				if (Btn5U_pressed==1)  MoveFaceForward*= -1;  // + in, - Out
 				Btn5U_pressed=0;
 			}
-/*
-		if (stop){
-				if(vexRT[Btn5D]) {
-				puncherPower = 40;
-			}
-
-			if(vexRT[Btn5U]) {
-				puncherPower = -40;
-			}
-
-			if(SensorValue[puncherStop]==0){stop = false;
-				wait1Msec(50);}
-		}
-		else{
-			if(SensorValue[puncherStop] == 1){puncherPower = 0; stop = true;}
-			else if(vexRT[Btn5D]){puncherPower = 40;}
-			else if(vexRT[Btn5U]) {
-				puncherPower = -40;
-			}
-		}
-
-		motor[puncherMotor8CY] = puncherPower;
-		*/
 
 		move2D(verticalPower*MoveFaceForward, horizontalPower*MoveFaceForward);
 		moveRollers();
@@ -305,34 +288,76 @@ void moveRollers()
 */
 void DisplayData()
 {
-	score_mode=-1;
-	if ((score_mode)>=0)  // <0 score mode shows data
-	{
- 		displayLCDString(0, 0, "Auto Selected: ");
-		if (score_mode==0) displayLCDString(1, 0, "score: No Autonomus ");
-		if (score_mode==1) displayLCDString(1, 0, "score: Red Front   ");
-		if (score_mode==2) displayLCDString(1, 0, "score: Blue Front   ");
-		if (score_mode==3) displayLCDString(1, 0, "score: Red Back    ");
-		if (score_mode==4) displayLCDString(1, 0, "score: Blue Back ");
-		return;
-	}
-	else{
+		int b1,b2, tmp;
+		// two Gyros and Angle
 		GyroTop=SensorValue[GyroTop8]*GyroBalance;
 		GyroBot=SensorValue[GyroBot7];
 		GyroAngle=(GyroTop-GyroBot)*Gyro_Cali;
- 		displayLCDString(0, 0, "GT:");
- 		displayNextLCDNumber(GyroTop);
- 		displayNextLCDString(",GB:");
- 		displayNextLCDNumber(GyroBot);
- //		displayNextLCDString(":Diff= ");
-
-// 		displayLCDString(1,0,"Run Time:diff ");
- 		displayLCDString(1,0,"diff ");
-		displayNextLCDNumber(GyroAngle);
-  		displayNextLCDString("  ");
-		//displayNextLCDNumber(time1[T1]/10);
- 		//displayNextLCDNumber(SensorValue(Potent));//[T1]/10);
- 	}
+		// two batteries
+		b1=nImmediateBatteryLevel;
+		b2=SensorValue[Expander]/0.280;
+		// three sonar
+		FrontSonar_mm=SensorValue[frontSonic];
+		RightSonar_mm=SensorValue[rightSonic];
+		LeftSonar_mm=SensorValue[leftSonic];
+		//SensorValue(sonarSensor);
+		// LCD Display
+	switch (score_mode) {
+		case 0:
+				 		displayLCDString(0, 0, "Auto Selected: ");
+						displayLCDString(1, 0, "score: No Autonomus ");
+						break;
+		case 1:
+				 		displayLCDString(0, 0, "Auto Selected: ");
+						displayLCDString(1, 0, "score: Red Front ");
+						break;
+		case 2:
+				 		displayLCDString(0, 0, "Auto Selected: ");
+						displayLCDString(1, 0, "score: Blue Front ");
+						break;
+		case 3:
+				 		displayLCDString(0, 0, "Auto Selected: ");
+						displayLCDString(1, 0, "score: Red Far ");
+						break;
+		case 4:
+				 		displayLCDString(0, 0, "Auto Selected: ");
+						displayLCDString(1, 0, "score: Blue Far ");
+						break;
+		case -1:
+ 						displayLCDString(0, 0, "GT:");
+ 						displayNextLCDNumber(GyroTop);
+ 						displayNextLCDString(",GB:");
+ 						displayNextLCDNumber(GyroBot);
+ 						displayLCDString(1,0,"Angle= ");
+						displayNextLCDNumber(GyroAngle);
+  					displayNextLCDString("   ");
+ 						break;
+		case -2:
+						displayLCDString(0, 0, "B1=");
+						displayNextLCDNumber(b1);
+						displayNextLCDString(" :B2=");
+						displayNextLCDNumber(b2);
+						displayNextLCDString("  ");
+						displayNextLCDNumber(time1[T1]);
+						displayLCDString(1, 0, "F=");
+						displayNextLCDNumber(FrontSonar_mm);
+						displayNextLCDString(" :R=");
+						displayNextLCDNumber(RightSonar_mm);
+						displayLCDString(1, 0, "L=");
+						displayNextLCDNumber(LeftSonar_mm);
+						displayNextLCDString("  ");
+						break;
+		default:
+						break;
+	}
+	// LED display
+	if (fabs(FrontSonar_mm-HighFlag_mm)<20)
+			turnLEDOn(puncherLED);
+	else if
+			(fabs(FrontSonar_mm-MiddleFlag_mm)<20)
+			turnLEDOn(puncherLED);
+	else
+			turnLEDOff(puncherLED);
 }
 
 
