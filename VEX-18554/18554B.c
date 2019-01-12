@@ -1,10 +1,10 @@
 #pragma config(Sensor, in1,    Potent,         sensorPotentiometer)
 #pragma config(Sensor, in2,    PotHand,        sensorPotentiometer)
-#pragma config(Sensor, in3,    ,               sensorAccelerometer)
-#pragma config(Sensor, in8,    PotArm,         sensorNone)
+#pragma config(Sensor, in7,    GyroBot7,       sensorGyro)
+#pragma config(Sensor, in8,    GyroTop8,       sensorGyro)
 #pragma config(Sensor, dgtl1,  frontSonic,     sensorSONAR_inch)
 #pragma config(Sensor, dgtl3,  leftEncoder,    sensorQuadEncoder)
-#pragma config(Sensor, dgtl5,  leftSonice,     sensorSONAR_inch)
+#pragma config(Sensor, dgtl5,  leftSonic,     sensorSONAR_inch)
 #pragma config(Sensor, dgtl7,  puncherLED,     sensorLEDtoVCC)
 #pragma config(Sensor, dgtl8,  puncherStop,    sensorTouch)
 #pragma config(Sensor, dgtl9,  rightEncoder,   sensorQuadEncoder)
@@ -51,8 +51,21 @@
 	void moveForwardDistanceInch(float distance_Left, float distance_Right,int power);
 	void moveTurnRightDegree(int turnDegree,int power);
 	void moveTurnRightDistanceInch(float distance_Left, float distance_Right,int power);
-	bool stop = true;
-	int puncherPower = 0;
+//	bool stop = true;
+//	int puncherPower = 0;
+	int PunchState=0;  // S=1, P=0
+	int PunchPower=0;
+	int PunchPowerMax=30;
+	int PunchPowerHold=5;
+	bool PunchTriggerred=false;
+	bool PunchTriggerAuto=false;
+	int PunchShotStop=0;
+	task PunchStateMachine();
+	int GyroTop=0;
+	int GyroBot=0;
+	float GyroBalance=1.3;
+	float Gyro_Cali=-0.5/1.10;
+	int GyroAngle=0;
 
 
 
@@ -139,6 +152,7 @@ task usercontrol()
 	clearTimer(T1);
 	score_mode=-1;
 
+	startTask(PunchStateMachine);
 	while(true)
 	{
 
@@ -174,7 +188,7 @@ task usercontrol()
 			wait1Msec(500);
 			state6D += 1;
 		}
-
+/*
 		if (stop){
 				if(vexRT[Btn5D]) {
 				puncherPower = 40;
@@ -196,6 +210,7 @@ task usercontrol()
 		}
 
 		motor[puncherMotor8CY] = puncherPower;
+		*/
 }
 }
 
@@ -221,6 +236,7 @@ task usercontrol()
 
 	}
 
+/*
 	void DisplayData()
 {
 	if ((score_mode)>=0)  // <0 score mode shows data
@@ -245,6 +261,38 @@ task usercontrol()
  	//	displayNextLCDNumber(time1[T1]/10);
 		displayLCDString(1, 0, "puncherStop: ");
  		displayNextLCDNumber(SensorValue[puncherStop]);
+ 	}
+}
+*/
+void DisplayData()
+{
+	score_mode=-1;
+	if ((score_mode)>=0)  // <0 score mode shows data
+	{
+ 		displayLCDString(0, 0, "Auto Selected: ");
+		if (score_mode==0) displayLCDString(1, 0, "score: No Autonomus ");
+		if (score_mode==1) displayLCDString(1, 0, "score: Red Front   ");
+		if (score_mode==2) displayLCDString(1, 0, "score: Blue Front   ");
+		if (score_mode==3) displayLCDString(1, 0, "score: Red Back    ");
+		if (score_mode==4) displayLCDString(1, 0, "score: Blue Back ");
+		return;
+	}
+	else{
+		GyroTop=SensorValue[GyroTop8]*GyroBalance;
+		GyroBot=SensorValue[GyroBot7];
+		GyroAngle=(GyroTop-GyroBot)*Gyro_Cali;
+ 		displayLCDString(0, 0, "GT:");
+ 		displayNextLCDNumber(GyroTop);
+ 		displayNextLCDString(",GB:");
+ 		displayNextLCDNumber(GyroBot);
+ //		displayNextLCDString(":Diff= ");
+
+// 		displayLCDString(1,0,"Run Time:diff ");
+ 		displayLCDString(1,0,"diff ");
+		displayNextLCDNumber(GyroAngle);
+  		displayNextLCDString("  ");
+		//displayNextLCDNumber(time1[T1]/10);
+ 		//displayNextLCDNumber(SensorValue(Potent));//[T1]/10);
  	}
 }
 
@@ -315,4 +363,60 @@ void moveTurnRightDistanceInch(float distance_Left, float distance_Right,int pow
 		moveForward(diff*power/fabs(power+0.001),power);
 	}
   move2D(0,0);
+}
+
+void movePunch()
+{
+	motor[puncherMotor8CY]=PunchPower;  // controled by Punch State machine
+}
+
+task PunchStateMachine()
+	{
+	 	// punch move								status
+	 	//  A,					S=1, P=0, 	Init=0,  5D to power
+		//	B,					S=1, p!=0  			1,  triggered S,start to engage
+		// 	C, 					S=0, P!=0, 			2,  release S,
+		//  D, (Delay)	S=0, P=P_hold, 	3, Hold engaged
+		//	E,					S=0, p!=0, 			4,		5D to Fire
+		//  when fired, goto B (1)
+		//
+		while(true)
+		{
+			PunchShotStop=SensorValue[puncherStop];
+			if (vexRT(Btn5D)==1) PunchTriggerred=true;
+		switch (PunchState)
+			{
+				case 0: // intit, S=1, P=0
+//					if (PunchShotStop==0&&PunchPower==0) break;  // free stand punch
+					PunchPower=PunchPowerMax;
+					PunchState++;
+					break;
+				case 1: //s=1
+					if (PunchTriggerred)PunchPower=PunchPowerMax;
+ 					if (PunchTriggerAuto)PunchPower=PunchPowerMax; // init Auto trigger
+//					PunchTriggerAuto=false; //reset trigger
+					if (PunchShotStop==0) PunchState++; //Power continue until S=0
+					break;
+				case	2:
+					wait1Msec(3000);		//S=0
+//					if (PunchShotStop==1) PunchPower=0; //emergency stop
+					PunchPower=PunchPowerHold;  //hold the punch, S=0
+					PunchState++;
+					break;
+			case 3:
+
+//					if (PunchShotStop==1) PunchPower=0; //emergency stop
+					if (PunchTriggerred||PunchTriggerAuto) // 5d or auto trigger
+					{
+					PunchPower=PunchPowerMax; //fire
+					PunchTriggerAuto=false; //reset
+					PunchTriggerred=false;
+					}  //else wait for shot
+					if (PunchShotStop==1) PunchState=1; //return to 1
+					break;
+				default: break;
+			}
+			wait1Msec(10);
+			movePunch();
+	}
 }
