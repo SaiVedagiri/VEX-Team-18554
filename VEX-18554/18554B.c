@@ -4,12 +4,12 @@
 #pragma config(Sensor, in8,    GyroTop8,       sensorGyro)
 #pragma config(Sensor, dgtl1,  frontSonic,     sensorSONAR_inch)
 #pragma config(Sensor, dgtl3,  leftEncoder,    sensorQuadEncoder)
-#pragma config(Sensor, dgtl5,  leftSonic,     sensorSONAR_inch)
+#pragma config(Sensor, dgtl5,  leftSonic,      sensorSONAR_inch)
 #pragma config(Sensor, dgtl7,  puncherLED,     sensorLEDtoVCC)
 #pragma config(Sensor, dgtl8,  puncherStop,    sensorTouch)
 #pragma config(Sensor, dgtl9,  rightEncoder,   sensorQuadEncoder)
 #pragma config(Sensor, dgtl11, rightSonic,     sensorSONAR_inch)
-#pragma config(Motor,  port1,           rightFrontMotor1, tmotorVex393_HBridge, openLoop, reversed, driveRight)
+#pragma config(Motor,  port1,           rightFrontMotor1, tmotorVex393_HBridge, openLoop, driveRight)
 #pragma config(Motor,  port2,           leftFrontMotor2A, tmotorVex393_MC29, openLoop, driveRight)
 #pragma config(Motor,  port3,           frontWheelLift3BY, tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port4,           rollerIn4,     tmotorVex393_MC29, openLoop, reversed)
@@ -58,6 +58,7 @@
 	int Roller_UpPower=0;
 	int Roller_UpPowerLevelMax=100;
 	int Roller_UpPowerLevel=Roller_UpPowerLevelMax;
+	int Btn5U_pressed=0;
 	int Btn6D_pressed=0;
 	int Btn6U_pressed=0;
 	int PunchState=0;  // S=1, P=0
@@ -69,12 +70,12 @@
 	bool PunchTriggerReady=false;
 	int PunchShotStop=0;
 	task PunchStateMachine();
-	task LCDLEDStateMachine();
 	int GyroTop=0;
 	int GyroBot=0;
 	float GyroBalance=1.3;
 	float Gyro_Cali=-0.5/1.10;
 	int GyroAngle=0;
+	int MoveFaceForward=1;
 
 
 
@@ -160,9 +161,8 @@ task usercontrol()
   bLCDBacklight = true;             	// Turn on LCD Backlight
 	clearTimer(T1);
 	score_mode=-1;
-
+	MoveFaceForward=1;
 	startTask(PunchStateMachine);
-	startTask(LCDLEDStateMachine);
 	while(true)
 	{
 
@@ -170,9 +170,6 @@ task usercontrol()
 		DisplayData();
 		int verticalPower = vexRT[Ch3]; // get joystick value for right vertical channel
 		int horizontalPower = vexRT[Ch4]; // get joystick value for left vertical channel
-
-		move2D(verticalPower, horizontalPower);
-		moveRollers();
 
 	if (vexRT[Btn6D]==1)
   		{
@@ -207,6 +204,16 @@ task usercontrol()
 				Btn6U_pressed=0;
 			}
 
+	if (vexRT[Btn5U]==1)
+  		{
+  		Btn5U_pressed=1;
+  		//Roller_InPowerLevel*= -1;  // + In, - out
+			}
+			else     //5D ==0
+			{
+				if (Btn5U_pressed==1)  MoveFaceForward*= -1;  // + in, - Out
+				Btn5U_pressed=0;
+			}
 /*
 		if (stop){
 				if(vexRT[Btn5D]) {
@@ -231,8 +238,9 @@ task usercontrol()
 		motor[puncherMotor8CY] = puncherPower;
 		*/
 
-		move2D(verticalPower, horizontalPower);
+		move2D(verticalPower*MoveFaceForward, horizontalPower*MoveFaceForward);
 		moveRollers();
+		DisplayData();
 	}
 }
 
@@ -265,11 +273,7 @@ void moveRollers()
 	motor[intakeBottomMotor6]=Roller_UpPower;
 }
 
-task LCDLEDStateMachine()
-	{
-		DisplayData();
-	}
-	;
+
 
 /*
 	void DisplayData()
