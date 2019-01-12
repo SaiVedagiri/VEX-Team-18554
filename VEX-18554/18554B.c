@@ -15,7 +15,7 @@
 #pragma config(Motor,  port3,           frontWheelLift3BY, tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port4,           rollerIn4,     tmotorVex393_MC29, openLoop, reversed)
 #pragma config(Motor,  port5,           rollerUp5,     tmotorVex393_MC29, openLoop)
-#pragma config(Motor,  port6,           intakeBottomMotor6, tmotorVex393_MC29, openLoop)
+#pragma config(Motor,  port6,           intakeBottomMotor6, tmotorNone, openLoop)
 #pragma config(Motor,  port7,           capFlipperMotor7, tmotorVex393_MC29, openLoop, reversed)
 #pragma config(Motor,  port8,           puncherMotor8CY, tmotorVex393_MC29, openLoop, reversed)
 #pragma config(Motor,  port9,           leftRearMotor9D, tmotorVex393_MC29, openLoop, driveLeft)
@@ -166,6 +166,14 @@ task usercontrol()
   clearLCDLine(1);                  	// Clear line 2 (1) of the LCD
   bLCDBacklight = true;             	// Turn on LCD Backlight
 	clearTimer(T1);
+	SensorType(GyroTop8) = sensorNone;
+	SensorType(GyroBot7) = sensorNone;
+	wait1Msec(1000);
+	//Reconfigure Analog Port 8 as a Gyro sensor and allow time for ROBOTC to calibrate it
+	SensorType[GyroTop8] =sensorGyro; // sensorGyro;
+	SensorType[GyroBot7] =sensorGyro; // sensorGyro;
+	SensorValue[GyroBot7]=0;
+	SensorValue[GyroTop8]=0;
 	score_mode=-1;
 	MoveFaceForward=1;
 	startTask(PunchStateMachine);
