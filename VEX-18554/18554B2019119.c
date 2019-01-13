@@ -573,31 +573,32 @@ task PunchStateMachine()
 		switch (PunchState)
 			{
 				case 0: // intit, S=1, P=0
-//					if (PunchShotStop==0&&PunchPower==0) break;  // free stand punch
+					if (PunchTriggerred||PunchTriggerAuto)
+					{  // free stand punch
 					PunchPower=PunchPowerMax;
-					PunchState++;
+					PunchState++; // if triggered, move on.
+					}
+					// stay in init position, if not triggered
 					break;
 				case 1: //s=1
-					if (PunchTriggerred)PunchPower=PunchPowerMax;
- 					if (PunchTriggerAuto)PunchPower=PunchPowerMax; // init Auto trigger
+					if (PunchTriggerred||PunchTriggerAuto)
+							PunchPower=PunchPowerMax; // move to hold position
 //					PunchTriggerAuto=false; //reset trigger
 					if (PunchShotStop==0) PunchState++; //Power continue until S=0
 					break;
 				case	2:
 					wait1Msec(3000);		//S=0
-//					if (PunchShotStop==1) PunchPower=0; //emergency stop
 					PunchPower=PunchPowerHold;  //hold the punch, S=0
 					PunchState++;
 					break;
-			case 3:
-
-//					if (PunchShotStop==1) PunchPower=0; //emergency stop
+				case 3:
 					if (PunchTriggerred||PunchTriggerAuto) // 5d or auto trigger
 					{
 					PunchPower=PunchPowerMax; //fire
 					PunchTriggerAuto=false; //reset
 					PunchTriggerred=false;
-					}  //else wait for shot
+					}
+					//else wait for shot
 					if (PunchShotStop==1) PunchState=1; //return to 1
 					break;
 				default: break;
