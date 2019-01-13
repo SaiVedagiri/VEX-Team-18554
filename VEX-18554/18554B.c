@@ -64,8 +64,8 @@
 	int Btn6U_pressed=0;
 	int PunchState=0;  // S=1, P=0
 	int PunchPower=0;
-	int PunchPowerMax=30;
-	int PunchPowerHold=5;
+	int PunchPowerMax=100;
+	int PunchPowerHold=10;
 	bool PunchTriggerred=false;
 	bool PunchTriggerAuto=false;
 	bool PunchTriggerReady=false;
@@ -174,14 +174,11 @@ task usercontrol()
 	SensorType[GyroBot7] =sensorGyro; // sensorGyro;
 	SensorValue[GyroBot7]=0;
 	SensorValue[GyroTop8]=0;
-	score_mode=-1;
+	score_mode=-2;
 	MoveFaceForward=1;
 	startTask(PunchStateMachine);
 	while(true)
 	{
-
-
-		DisplayData();
 		int verticalPower = vexRT[Ch3]; // get joystick value for right vertical channel
 		int horizontalPower = vexRT[Ch4]; // get joystick value for left vertical channel
 
@@ -229,7 +226,7 @@ task usercontrol()
 				Btn5U_pressed=0;
 			}
 
-		move2D(verticalPower*MoveFaceForward, horizontalPower*MoveFaceForward);
+		move2D(verticalPower*MoveFaceForward, horizontalPower);
 		moveRollers();
 		DisplayData();
 	}
@@ -475,7 +472,7 @@ task PunchStateMachine()
 					if (PunchShotStop==0) PunchState++; //Power continue until S=0
 					break;
 				case	2:
-					wait1Msec(3000);		//S=0
+					wait1Msec(1300);		//S=0
 					PunchPower=PunchPowerHold;  //hold the punch, S=0
 					PunchTriggerAuto=false; // clear any trigger
 					PunchTriggerred=false;
