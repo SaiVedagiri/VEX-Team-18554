@@ -4,7 +4,7 @@
 #pragma config(Sensor, in7,    GyroBot7,       sensorGyro)
 #pragma config(Sensor, in8,    GyroTop8,       sensorGyro)
 #pragma config(Sensor, dgtl1,  frontSonic,     sensorSONAR_mm)
-#pragma config(Sensor, dgtl3,  leftEncoder,    sensorQuadEncoder)
+#pragma config(Sensor, dgtl3,  leftEncoder,    sensorNone)
 #pragma config(Sensor, dgtl5,  leftSonic,      sensorSONAR_mm)
 #pragma config(Sensor, dgtl7,  puncherLED,     sensorLEDtoVCC)
 #pragma config(Sensor, dgtl8,  puncherStop,    sensorTouch)
@@ -13,7 +13,7 @@
 #pragma config(Motor,  port1,           rightFrontMotor1, tmotorVex393_HBridge, openLoop, driveRight)
 #pragma config(Motor,  port2,           leftFrontMotor2A, tmotorVex393_MC29, openLoop, driveRight)
 #pragma config(Motor,  port3,           frontWheelLift3BY, tmotorVex393_MC29, openLoop)
-#pragma config(Motor,  port4,           rollerIn4,     tmotorVex393_MC29, openLoop, reversed)
+#pragma config(Motor,  port4,           rollerIn4,     tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port5,           rollerUp5,     tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port6,           intakeBottomMotor6, tmotorNone, openLoop)
 #pragma config(Motor,  port7,           capFlipperMotor7, tmotorVex393_MC29, openLoop, reversed)
@@ -38,21 +38,26 @@
 #include "Vex_Competition_Includes.c"
 
   int score_mode=0;
+  bool RedColor=true;
   int timeDrop=0;
   void go_auto();
   int minTurn = 20;
 	int state6U = 0;
 	int state6D =0;
-	int Inches2encoder=27;
+	int Inches2encoder=22;
 	int turnDiameter=17;
 	float leftTravel,rightTravel, diff;
 	int Lencode,Rencode;
+	task PunchStateMachine();
+	task displayTask();
 	void move2D(int motorPower, int turnPower);
 	void DisplayData();
+	void moveForwardDistanceMM(float distance,int power);
 	void moveForwardDistanceInch(float distance_Left, float distance_Right,int power);
 	void moveTurnRightDegree(int turnDegree,int power);
 	void moveTurnRightDistanceInch(float distance_Left, float distance_Right,int power);
 	void moveRollers();
+	void moveWallUntilSonarMM(int Gyro_line, int wall_distance, int Front_distance,int power);
 	int Roller_InPower=0;
 	int Roller_InPowerLevelMax=100;
 	int Roller_InPowerLevel=Roller_InPowerLevelMax;
@@ -70,7 +75,6 @@
 	bool PunchTriggerAuto=false;
 	bool PunchTriggerReady=false;
 	int PunchShotStop=0;
-	task PunchStateMachine();
 	int GyroTop=0;
 	int GyroBot=0;
 	float GyroBalance=1.3;
@@ -80,8 +84,10 @@
 	int FrontSonar_mm=0;
 	int RightSonar_mm=0;
 	int LeftSonar_mm=0;
-	int HighFlag_mm=0;
-	int MiddleFlag_mm=0;
+	int HighFlag_mm=500;
+	int MiddleFlag_mm=300;
+	int Left_Encoder = 0;
+	int Right_Encoder = 0;
 
 
 
@@ -129,6 +135,18 @@ task autonomous()
 	go_auto();
 }
 
+task displayTask()
+{
+	clearLCDLine(0);                      // Clear line 1 (0) of the LCD
+  clearLCDLine(1);                      // Clear line 2 (1) of the LCD
+  bLCDBacklight = true;                 // Turn on LCD Backlight
+while(true)
+{
+	DisplayData();
+	wait1Msec(20);
+}
+}
+
 void go_auto()
 {
   // ..........................................................................
@@ -136,17 +154,22 @@ void go_auto()
   // ..........................................................................
 
   // Remove this function call once you have "real" code.
-  clearLCDLine(0);                      // Clear line 1 (0) of the LCD
+/*
+	clearLCDLine(0);                      // Clear line 1 (0) of the LCD
   clearLCDLine(1);                      // Clear line 2 (1) of the LCD
   bLCDBacklight = true;                 // Turn on LCD Backlight
+*/
 	clearTimer(T1);
-		if (score_mode==0) return;
+
+	//PunchTriggerAuto=true;
+	motor[rollerIn4]=Roller_InPower;
+	motor[rollerUp5]=Roller_UpPower;
+	moveForwardDistanceMM(35*25.4, 50);
+
 	timeDrop=time1[T1];
+
 	return;
 }
-
-
-
 
 
 /*---------111111111111111------------------------------------------------------------------*/
@@ -162,9 +185,10 @@ void go_auto()
 task usercontrol()
 {
   // User control code here, inside the loop
-  clearLCDLine(0);                  	// Clear line 1 (0) of the LCD
+/*  clearLCDLine(0);                  	// Clear line 1 (0) of the LCD
   clearLCDLine(1);                  	// Clear line 2 (1) of the LCD
   bLCDBacklight = true;             	// Turn on LCD Backlight
+*/
 	clearTimer(T1);
 	SensorType(GyroTop8) = sensorNone;
 	SensorType(GyroBot7) = sensorNone;
@@ -177,6 +201,10 @@ task usercontrol()
 	score_mode=-2;
 	MoveFaceForward=1;
 	startTask(PunchStateMachine);
+	startTask (displayTask);
+	wait1Msec(10000);
+	go_auto();
+//	return;
 	while(true)
 	{
 		int verticalPower = vexRT[Ch3]; // get joystick value for right vertical channel
@@ -185,7 +213,6 @@ task usercontrol()
 	if (vexRT[Btn6D]==1)
   		{
   		Btn6D_pressed=1;
-  		//Roller_InPowerLevel*= -1;  // + In, - out
   		Roller_InPower=	Roller_InPowerLevel;
   		turnLEDOn(puncherLED);
 			}
@@ -218,8 +245,7 @@ task usercontrol()
 	if (vexRT[Btn5U]==1)
   		{
   		Btn5U_pressed=1;
-  		//Roller_InPowerLevel*= -1;  // + In, - out
-			}
+ 			}
 			else     //5D ==0
 			{
 				if (Btn5U_pressed==1)  MoveFaceForward*= -1;  // + in, - Out
@@ -232,7 +258,7 @@ task usercontrol()
 	}
 }
 
-	void move2D(int motorPower, int turnPower){
+void move2D(int motorPower, int turnPower){
 		    if (abs(turnPower) > minTurn) {
         turnPower -= abs(turnPower)/turnPower *minTurn;
     }
@@ -261,43 +287,13 @@ void moveRollers()
 	motor[intakeBottomMotor6]=Roller_UpPower;
 }
 
-
-
-/*
-	void DisplayData()
-{
-	if ((score_mode)>=0)  // <0 score mode shows data
-	{
- 		displayLCDString(0, 0, "Auto Selected: ");
-		if (score_mode==0) displayLCDString(1, 0, "score: No Autonomus ");
-		if (score_mode==1) displayLCDString(1, 0, "score: Red Front   ");
-		if (score_mode==2) displayLCDString(1, 0, "score: Blue Front   ");
-		if (score_mode==3) displayLCDString(1, 0, "score: Red Back    ");
-		if (score_mode==4) displayLCDString(1, 0, "score: Blue Back ");
-		return;
-	}
-	else{
-		int b1, b2;
-		b1 = nImmediateBatteryLevel;
-//		b2 = SensorValue[Expander]/0.28
-		displayLCDString(0,0,"Battery1: ");
-		displayNextLCDNumber(b1);
-	//	displayLCDString(1,0,"Battery2: ");
-	//	displayNextLCDNumber(b2);
- 	//	displayLCDString(1, 0, "Run Time: ");
- 	//	displayNextLCDNumber(time1[T1]/10);
-		displayLCDString(1, 0, "puncherStop: ");
- 		displayNextLCDNumber(SensorValue[puncherStop]);
- 	}
-}
-*/
 void DisplayData()
 {
 		int b1,b2, tmp;
 		// two Gyros and Angle
 		GyroTop=SensorValue[GyroTop8]*GyroBalance;
 		GyroBot=SensorValue[GyroBot7];
-		GyroAngle=(GyroTop-GyroBot)*Gyro_Cali;
+		GyroAngle=(GyroBot)*1;//Gyro_Cali;
 		// two batteries
 		b1=nImmediateBatteryLevel;
 		b2=SensorValue[Expander]/0.280;
@@ -305,6 +301,8 @@ void DisplayData()
 		FrontSonar_mm=SensorValue[frontSonic];
 		RightSonar_mm=SensorValue[rightSonic];
 		LeftSonar_mm=SensorValue[leftSonic];
+		Left_Encoder = SensorValue[leftEncoder];
+		Right_Encoder = SensorValue[rightEncoder];
 		//SensorValue(sonarSensor);
 		// LCD Display
 	switch (score_mode) {
@@ -338,17 +336,23 @@ void DisplayData()
   					displayNextLCDString("   ");
  						break;
 		case -2:
-						displayLCDString(0, 0, "B1=");
-						displayNextLCDNumber(b1);
-						displayNextLCDString(" :B2=");
-						displayNextLCDNumber(b2);
+	//					displayLCDString(0, 0, "B1=");
+	//					displayNextLCDNumber(b1);
+						displayLCDString(0, 0, "EL=");
+						displayNextLCDNumber(Left_Encoder);
+						displayNextLCDString("ER=");
+						displayNextLCDNumber(Right_Encoder);
+//						displayNextLCDString(" :B2=");
+//						displayNextLCDNumber(b2);
+						displayNextLCDString(" G=");
+						displayNextLCDNumber(GyroAngle);
 						displayNextLCDString("  ");
-						displayNextLCDNumber(time1[T1]);
-						displayLCDString(1, 0, "F=");
+//						displayNextLCDNumber(time1[T1]);
+						displayLCDString(1, 0, "F");
 						displayNextLCDNumber(FrontSonar_mm);
-						displayNextLCDString(" :R=");
+						displayNextLCDString(" R");
 						displayNextLCDNumber(RightSonar_mm);
-						displayLCDString(1, 0, "L=");
+						displayNextLCDString( " L");
 						displayNextLCDNumber(LeftSonar_mm);
 						displayNextLCDString("  ");
 						break;
@@ -376,6 +380,34 @@ void moveForward(int forwardsPower, int turnClockPower)
  motor[leftRearMotor9D] = power;
 }
 
+
+void moveForwardDistanceMM(float distance,int power)
+{
+	move2D(power,0);
+	//wait for travel distance of Inch, then Stop
+// 	nMotorEncoder[leftMotor]=0;
+// 	nMotorEncoder[rightMotor]=0;
+  SensorValue[rightEncoder] = 0;    /* Clear the encoders for    */
+  SensorValue[leftEncoder] = 0;    /* Clear the encoders for    */
+	int GyroAngle0=GyroAngle;
+
+  while (true)
+	{
+//		Lencode=fabs(nMotorEncoder[leftMotor]);
+//		Rencode=fabs(nMotorEncoder[rightMotor]);//*101/63;
+		Lencode=fabs(SensorValue[leftEncoder]);
+		Rencode=fabs(SensorValue[rightEncoder]);
+		leftTravel=Lencode/Inches2encoder;
+		rightTravel=Rencode/Inches2encoder;
+
+		diff=GyroAngle-GyroAngle0;
+//		if (fabs(leftTravel*25.4)>distance_Left)	break;
+		if (fabs(rightTravel*25.4)>distance)	break;
+//		moveForward(power,-diff*power/fabs(power+0.001));
+		moveForward(power,-2*diff);
+	}
+  move2D(0,0);
+}
 
 void moveForwardDistanceInch(float distance_Left, float distance_Right,int power)
 {
@@ -438,6 +470,38 @@ void movePunch()
 {
 	motor[puncherMotor8CY]=PunchPower;  // controled by Punch State machine
 }
+
+void moveWallUntilSonarMM(int Gyro_line, int wall_distance, int Front_distance,int power)
+	{
+	SensorValue[rightEncoder] = 0;    /* Clear the encoders for    */
+  SensorValue[leftEncoder] = 0;    /* Clear the encoders for    */
+	int Front_Sonar=0;
+	int Side_Sonar=0;
+	int Front_Gyro=0;
+	int Side_diff;
+	int Gyro_diff;
+
+  while (true)
+	{
+		Front_Sonar=FrontSonar_mm;
+		if (RedColor)
+		Side_Sonar=LeftSonar_mm;
+		else
+		Side_Sonar=RightSonar_mm;
+		Front_Gyro=GyroAngle;
+
+		Side_diff=Side_Sonar-wall_distance; //assume blue
+		if (RedColor) Side_diff*=-1;
+		motor[leftRearMotor9D]=power+Side_diff;
+		motor[rightRearMotor10] = power-Side_diff;
+
+		Gyro_diff=Front_Gyro-Gyro_line;
+		motor[leftRearMotor9D]=power-Gyro_diff;
+		motor[rightRearMotor10] = power+Gyro_diff;
+		if (Front_Sonar<Front_distance)	break;
+	}
+	move2D(0,0);
+	}
 
 task PunchStateMachine()
 	{
