@@ -42,8 +42,6 @@
   int timeDrop=0;
   void go_auto();
   int minTurn = 20;
-	int state6U = 0;
-	int state6D =0;
 	int Inches2encoder=22;
 	int turnDiameter=17;
 	float leftTravel,rightTravel, diff;
@@ -52,12 +50,13 @@
 	task displayTask();
 	void move2D(int motorPower, int turnPower);
 	void DisplayData();
-	void moveForwardDistanceMM(float distance,int power);
+	void moveForwardDistanceMM(float distance,int Gyro_turn,int power);
 	void moveForwardDistanceInch(float distance_Left, float distance_Right,int power);
 	void moveTurnRightDegree(int turnDegree,int power);
 	void moveTurnRightDistanceInch(float distance_Left, float distance_Right,int power);
 	void moveRollers();
 	void moveWallUntilSonarMM(int Gyro_line, int wall_distance, int Front_distance,int power);
+	void moveWallForwardDistance(int Gyro_line, int wall_distance, int forward_distance,int power);
 	int Roller_InPower=0;
 	int Roller_InPowerLevelMax=100;
 	int Roller_InPowerLevel=Roller_InPowerLevelMax;
@@ -84,8 +83,8 @@
 	int FrontSonar_mm=0;
 	int RightSonar_mm=0;
 	int LeftSonar_mm=0;
-	int HighFlag_mm=500;
-	int MiddleFlag_mm=300;
+	int HighFlag_mm=1050;
+	int MiddleFlag_mm=640;
 	int Left_Encoder = 0;
 	int Right_Encoder = 0;
 
@@ -161,14 +160,26 @@ void go_auto()
 */
 	clearTimer(T1);
 
-	//PunchTriggerAuto=true;
-	motor[rollerIn4]=Roller_InPower;
-	motor[rollerUp5]=Roller_UpPower;
-	moveForwardDistanceMM(35*25.4, 50);
+	PunchTriggerAuto=true; // engge puncher
+	motor[rollerIn4]=Roller_InPowerLevelMax;
+	motor[rollerUp5]=Roller_UpPowerLevelMax;
 
+	moveForwardDistanceMM(25*25.4,0, 100);// only moe forward
+	moveForwardDistanceMM(10*25.4,0, 75);
+	wait1Msec(200);
+	moveForwardDistanceMM(30*25.4,0, -100);
+	moveForwardDistanceMM(0,-800, -100); // only turn left 90.0 degree
+	motor[rollerIn4]=0;
+	motor[rollerUp5]=0;
+	moveWallForwardDistance( -900,  135,  200, 100);
+	moveWallUntilSonarMM(-900,  135, MiddleFlag_mm, 100);
+	PunchTriggerAuto=true;//shot
+	waitUntil(PunchState!=3);
+	moveWallUntilSonarMM(-900,  135, 200, 100);
 	timeDrop=time1[T1];
-
 	return;
+//		void moveWallForwardDistance(int Gyro_line, int wall_distance, int forward_distance,int power)
+
 }
 
 
@@ -202,7 +213,7 @@ task usercontrol()
 	MoveFaceForward=1;
 	startTask(PunchStateMachine);
 	startTask (displayTask);
-	wait1Msec(10000);
+	wait1Msec(5000);
 	go_auto();
 //	return;
 	while(true)
@@ -284,12 +295,11 @@ void moveRollers()
 {
 	motor[rollerIn4]=Roller_InPower;
 	motor[rollerUp5]=Roller_UpPower;
-	motor[intakeBottomMotor6]=Roller_UpPower;
 }
 
 void DisplayData()
 {
-		int b1,b2, tmp;
+		int b1,b2;
 		// two Gyros and Angle
 		GyroTop=SensorValue[GyroTop8]*GyroBalance;
 		GyroBot=SensorValue[GyroBot7];
@@ -360,10 +370,10 @@ void DisplayData()
 						break;
 	}
 	// LED display
-	if (fabs(FrontSonar_mm-HighFlag_mm)<20)
+	if (fabs(FrontSonar_mm-HighFlag_mm)<50)
 			turnLEDOn(puncherLED);
 	else if
-			(fabs(FrontSonar_mm-MiddleFlag_mm)<20)
+			(fabs(FrontSonar_mm-MiddleFlag_mm)<50)
 			turnLEDOn(puncherLED);
 	else
 			turnLEDOff(puncherLED);
@@ -381,7 +391,7 @@ void moveForward(int forwardsPower, int turnClockPower)
 }
 
 
-void moveForwardDistanceMM(float distance,int power)
+void moveForwardDistanceMM(float distance, int Gyro_turn, int power)
 {
 	move2D(power,0);
 	//wait for travel distance of Inch, then Stop
@@ -400,9 +410,13 @@ void moveForwardDistanceMM(float distance,int power)
 		leftTravel=Lencode/Inches2encoder;
 		rightTravel=Rencode/Inches2encoder;
 
-		diff=GyroAngle-GyroAngle0;
+		diff=GyroAngle-GyroAngle0-Gyro_turn;
 //		if (fabs(leftTravel*25.4)>distance_Left)	break;
-		if (fabs(rightTravel*25.4)>distance)	break;
+		if (Gyro_turn!=0) {
+			if (fabs(diff)<50) break;
+		}
+		else
+			if (fabs(rightTravel*25.4)>distance)	break;
 //		moveForward(power,-diff*power/fabs(power+0.001));
 		moveForward(power,-2*diff);
 	}
@@ -499,6 +513,44 @@ void moveWallUntilSonarMM(int Gyro_line, int wall_distance, int Front_distance,i
 		motor[leftRearMotor9D]=power-Gyro_diff;
 		motor[rightRearMotor10] = power+Gyro_diff;
 		if (Front_Sonar<Front_distance)	break;
+	}
+	move2D(0,0);
+	}
+
+	//move distance alone the wall
+	void moveWallForwardDistance(int Gyro_line, int wall_distance, int forward_distance,int power)
+	{
+	SensorValue[rightEncoder] = 0;    /* Clear the encoders for    */
+  SensorValue[leftEncoder] = 0;    /* Clear the encoders for    */
+	int Front_Sonar=0;
+	int Side_Sonar=0;
+	int Front_Gyro=0;
+	int Side_diff;
+	int Gyro_diff;
+
+  while (true)
+	{
+		Front_Sonar=FrontSonar_mm;
+		if (RedColor)
+		Side_Sonar=LeftSonar_mm;
+		else
+		Side_Sonar=RightSonar_mm;
+		Front_Gyro=GyroAngle;
+
+		Lencode=fabs(SensorValue[leftEncoder]);
+		Rencode=fabs(SensorValue[rightEncoder]);
+		leftTravel=Lencode/Inches2encoder;
+		rightTravel=Rencode/Inches2encoder;
+
+		Side_diff=Side_Sonar-wall_distance; //assume blue
+		if (RedColor) Side_diff*=-1;
+		motor[leftRearMotor9D]=power+Side_diff;
+		motor[rightRearMotor10] = power-Side_diff;
+
+		Gyro_diff=Front_Gyro-Gyro_line;
+		motor[leftRearMotor9D]=power-Gyro_diff;
+		motor[rightRearMotor10] = power+Gyro_diff;
+		if (fabs(rightTravel*25.4)>forward_distance)	break;
 	}
 	move2D(0,0);
 	}
