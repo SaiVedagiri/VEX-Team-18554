@@ -4,10 +4,10 @@
 #pragma config(Sensor, in7,    GyroBot7,       sensorGyro)
 #pragma config(Sensor, in8,    GyroTop8,       sensorGyro)
 #pragma config(Sensor, dgtl1,  frontSonic,     sensorSONAR_mm)
-#pragma config(Sensor, dgtl3,  leftEncoder,    sensorNone)
+#pragma config(Sensor, dgtl3,  puncherLED,     sensorLEDtoVCC)
+#pragma config(Sensor, dgtl4,  puncherStop,    sensorTouch)
 #pragma config(Sensor, dgtl5,  leftSonic,      sensorSONAR_mm)
-#pragma config(Sensor, dgtl7,  puncherLED,     sensorLEDtoVCC)
-#pragma config(Sensor, dgtl8,  puncherStop,    sensorTouch)
+#pragma config(Sensor, dgtl7,  leftEncoder,    sensorQuadEncoder)
 #pragma config(Sensor, dgtl9,  rightEncoder,   sensorQuadEncoder)
 #pragma config(Sensor, dgtl11, rightSonic,     sensorSONAR_mm)
 #pragma config(Motor,  port1,           rightFrontMotor1, tmotorVex393_HBridge, openLoop, driveRight)
@@ -209,9 +209,11 @@ task usercontrol()
 	SensorType[GyroBot7] =sensorGyro; // sensorGyro;
 	SensorValue[GyroBot7]=0;
 	SensorValue[GyroTop8]=0;
+  SensorValue[rightEncoder] = 0;    /* Clear the encoders for    */
+  SensorValue[leftEncoder] = 0;    /* Clear the encoders for    */
 	score_mode=-2;
 	MoveFaceForward=1;
-	startTask(PunchStateMachine);
+//	startTask(PunchStateMachine);
 	startTask (displayTask);
 	wait1Msec(5000);
 	go_auto();
@@ -314,6 +316,7 @@ void DisplayData()
 		Left_Encoder = SensorValue[leftEncoder];
 		Right_Encoder = SensorValue[rightEncoder];
 		//SensorValue(sonarSensor);
+		PunchShotStop=SensorValue[puncherStop];
 		// LCD Display
 	switch (score_mode) {
 		case 0:
@@ -355,7 +358,7 @@ void DisplayData()
 //						displayNextLCDString(" :B2=");
 //						displayNextLCDNumber(b2);
 						displayNextLCDString(" G=");
-						displayNextLCDNumber(GyroAngle);
+						displayNextLCDNumber(PunchShotStop);
 						displayNextLCDString("  ");
 //						displayNextLCDNumber(time1[T1]);
 						displayLCDString(1, 0, "F");
