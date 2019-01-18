@@ -40,14 +40,16 @@
   int score_mode=0;
   bool RedColor=true;
   int timeDrop=0;
-  void go_auto();
   int minTurn = 20;
+  int temp1, temp2, temp3;
 	int Inches2encoder=22;
 	int turnDiameter=17;
 	float leftTravel,rightTravel, diff;
 	int Lencode,Rencode;
 	task PunchStateMachine();
 	task displayTask();
+  void go_auto();
+	void go_test();
 	void move2D(int motorPower, int turnPower);
 	void DisplayData();
 	void moveForwardDistanceMM(float distance_Left, float distance_Right, int power);
@@ -55,6 +57,7 @@
 	void moveWallUntilSonarMM(int Gyro_line, int wall_distance, int Front_distance,int power);
 	void moveWallForwardDistanceMM(int Gyro_line, int wall_distance, int forward_distance,int power);
 	void moveRightDegreeGyro(int rightTurnDegree, int power);
+	void moveTurnRightDegree(float degreeRight,int power);
 	int Roller_InPower=0;
 	int Roller_InPowerLevelMax=100;
 	int Roller_InPowerLevel=Roller_InPowerLevelMax;
@@ -81,7 +84,7 @@
 	int FrontSonar_mm=0;
 	int RightSonar_mm=0;
 	int LeftSonar_mm=0;
-	int HighFlag_mm=1150;
+	int HighFlag_mm=1100;
 	int MiddleFlag_mm=650;
 	int Left_Encoder = 0;
 	int Right_Encoder = 0;
@@ -145,6 +148,11 @@ while(true)
 }
 }
 
+void go_test()
+{
+		moveTurnRightDegree(180,50);
+}
+
 void go_auto()
 {
   // ..........................................................................
@@ -157,24 +165,33 @@ void go_auto()
   clearLCDLine(1);                      // Clear line 2 (1) of the LCD
   bLCDBacklight = true;                 // Turn on LCD Backlight
 */
+	int ColorFactor=1;
+	if (!RedColor) ColorFactor=-1;
 	clearTimer(T1);
+	PunchTriggerAuto=true; // engge puncher
 
 	motor[rollerIn10]=Roller_InPowerLevelMax;
 	motor[rollerUp5]=Roller_UpPowerLevelMax;
 
-	moveForwardDistanceMM(160,160, 80);// only moe forward
-	moveForwardDistanceMM(700,750, 80);// only moe forward
+	moveForwardDistanceMM(870,870, 50);// only moe forward
 	wait1Msec(200);
-	moveForwardDistanceMM(950,900, -80);
-	moveRightDegreeGyro(800, -80);
-	moveWallUntilSonarMM(-900,  150, MiddleFlag_mm, 50);//approach
-	moveForwardDistanceMM(10,10, -50);// break
+	temp2=Lencode;
+	temp3=Rencode;
+	moveForwardDistanceMM(900,900, -80);
+	moveRightDegreeGyro(900, -60*ColorFactor);
+//	moveTurnRightDegree(110,-80);
+	temp1=GyroAngle;
+	moveWallUntilSonarMM(-900*ColorFactor,  150, MiddleFlag_mm, 60);//approach
+//	moveForwardDistanceMM(10,10, -50);// break
 	PunchTriggerAuto=true; // engge puncher
-	wait1Msec(1000);
-	moveWallUntilSonarMM(-930,  100, 200, 80);//approach
-	moveWallUntilSonarMM(-900,  150, -1*HighFlag_mm, -50);//away
+	waitUntil(PunchShotStop==1);
+//	temp2=GyroAngle;
+	moveWallUntilSonarMM(-900*ColorFactor,  100, 150, 60);//approach
+//	temp3=GyroAngle;
+	moveWallUntilSonarMM(-900*ColorFactor,  150, -1*HighFlag_mm, -50);//away
 	moveForwardDistanceMM(10,10, 50);// break
 	PunchTriggerAuto=true; // engge puncher
+	waitUntil(PunchShotStop==1);
 	timeDrop=time1[T1];
 //	int Gyro_line=GyroAngle;
 //	moveRightDegreeGyro(Gyro_line+900, -80*sgn(Gyro_line+900));
@@ -218,7 +235,6 @@ task usercontrol()
   SensorValue[leftEncoder] = 0;    /* Clear the encoders for    */
 	score_mode=-2;
 	MoveFaceForward=1;
-	PunchTriggerAuto=true; // engge puncher
 	wait1Msec(3000);
 	go_auto();
 //	return;
@@ -321,6 +337,7 @@ void DisplayData()
 		Right_Encoder = SensorValue[rightEncoder];
 		//SensorValue(sonarSensor);
 		PunchShotStop=SensorValue[puncherStop];
+		wait1Msec(20);
 		// LCD Display
 	switch (score_mode) {
 		case 0:
@@ -450,7 +467,7 @@ void moveWallUntilSonarMM(int Gyro_line, int wall_distance, int Front_distance,i
 	int Front_Gyro=0;
 	int Side_diff;
 	int Gyro_diff;
-
+//	if (Gyro_line==0) Gyro_line=GyroAngle; // keep angle
 
   while (true)
 	{
@@ -511,6 +528,27 @@ void moveWallUntilSonarMM(int Gyro_line, int wall_distance, int Front_distance,i
 	}
 	move2D(0,0);
 	}
+
+	void moveTurnRightDegree(float degreeRight,int power)
+{
+	float turnDiameter=16*25.4*180/192;// 16 inches
+	float arc_distance=turnDiameter*3.1416*degreeRight/360;
+	SensorValue[rightEncoder] = 0;    /* Clear the encoders for    */
+	SensorValue[leftEncoder] = 0;    /* Clear the encoders for    */
+	float leftTravel_loc,rightTravel_loc;
+	while (true)
+	{
+			Rencode=SensorValue[rightEncoder];
+			Lencode=SensorValue[leftEncoder];
+			leftTravel_loc=25.4*Lencode/Inches2encoder;
+			rightTravel_loc=25.4*Rencode/Inches2encoder;
+		diff=abs(rightTravel_loc)-abs(leftTravel_loc);
+		if ((abs(leftTravel_loc)+abs(rightTravel_loc))>2*abs(arc_distance))	break;
+		//moveForward(diff*sgn(power),power);
+		moveForward(0,power);
+	}
+	move2D(0,0);
+}
 
 task PunchStateMachine()
 	{
