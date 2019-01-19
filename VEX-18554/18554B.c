@@ -180,17 +180,17 @@ void go_auto()
 	temp3=Rencode;
 	moveForwardDistanceMM(930,930, -80);
 //	moveRightDegreeGyro(800, -75*ColorFactor);
-	moveTurnRightDegree(90,-80*ColorFactor);
+	moveTurnRightDegree(95,-80*ColorFactor);
 	temp1=GyroAngle;
 //	moveWallUntilSonarMM(-900*ColorFactor,  200, MiddleFlag_mm, 60);//approach
-	moveForwardDistanceMM(500,500, 60);// break
+	moveForwardDistanceMM(450,450, 60);// break
 	PunchTriggerAuto=true; // engge puncher
 	waitUntil(PunchShotStop==1);
 //	temp2=GyroAngle;
 	moveWallUntilSonarMM(-900*ColorFactor,  100, 150, 60);//approach
 //	temp3=GyroAngle;
-	moveWallUntilSonarMM(-900*ColorFactor,  150, -1*HighFlag_mm, -50);//away
-	moveForwardDistanceMM(10,10, 50);// break
+	moveWallUntilSonarMM(-900*ColorFactor,  180, -1*HighFlag_mm, -50);//away
+//	moveForwardDistanceMM(10,10, 50);// break
 	wait1Msec(2000);
 	PunchTriggerAuto=true; // engge puncher
 	waitUntil(PunchShotStop==1);
