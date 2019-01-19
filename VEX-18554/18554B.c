@@ -67,6 +67,8 @@
 	int Btn5U_pressed=0;
 	int Btn6D_pressed=0;
 	int Btn6U_pressed=0;
+	int Btn7R_pressed=0;
+	int Btn7L_pressed=0;
 	int PunchState=0;  // S=1, P=0
 	int PunchPower=0;
 	int PunchPowerMax=100;
@@ -78,17 +80,15 @@
 	int GyroTop=0;
 	int GyroBot=0;
 	float GyroBalance=1.3;
-	float Gyro_Cali=-0.5/1.10;
 	int GyroAngle=0;
 	int MoveFaceForward=1;
 	int FrontSonar_mm=0;
 	int RightSonar_mm=0;
 	int LeftSonar_mm=0;
 	int HighFlag_mm=1100;
-	int MiddleFlag_mm=650;
+	int MiddleFlag_mm=680;
 	int Left_Encoder = 0;
 	int Right_Encoder = 0;
-	float ExpanderFactor=0.95;
 
 
 
@@ -132,7 +132,7 @@ void pre_auton()
 
 task autonomous()
 {
-	score_mode=-1;
+if (	score_mode==0) return; // no auto
 	go_auto();
 }
 
@@ -165,24 +165,25 @@ void go_auto()
   clearLCDLine(1);                      // Clear line 2 (1) of the LCD
   bLCDBacklight = true;                 // Turn on LCD Backlight
 */
+	score_mode=-2;
 	int ColorFactor=1;
 	if (!RedColor) ColorFactor=-1;
 	clearTimer(T1);
-	PunchTriggerAuto=true; // engge puncher
+	PunchTriggerAuto=true; // engage puncher
 
 	motor[rollerIn10]=Roller_InPowerLevelMax;
 	motor[rollerUp5]=Roller_UpPowerLevelMax;
 
-	moveForwardDistanceMM(870,870, 50);// only moe forward
+	moveForwardDistanceMM(890,890, 50);// only move forward
 	wait1Msec(200);
 	temp2=Lencode;
 	temp3=Rencode;
-	moveForwardDistanceMM(900,900, -80);
-	moveRightDegreeGyro(900, -60*ColorFactor);
-//	moveTurnRightDegree(110,-80);
+	moveForwardDistanceMM(930,930, -80);
+//	moveRightDegreeGyro(800, -75*ColorFactor);
+	moveTurnRightDegree(90,-80*ColorFactor);
 	temp1=GyroAngle;
-	moveWallUntilSonarMM(-900*ColorFactor,  150, MiddleFlag_mm, 60);//approach
-//	moveForwardDistanceMM(10,10, -50);// break
+//	moveWallUntilSonarMM(-900*ColorFactor,  200, MiddleFlag_mm, 60);//approach
+	moveForwardDistanceMM(500,500, 60);// break
 	PunchTriggerAuto=true; // engge puncher
 	waitUntil(PunchShotStop==1);
 //	temp2=GyroAngle;
@@ -190,6 +191,7 @@ void go_auto()
 //	temp3=GyroAngle;
 	moveWallUntilSonarMM(-900*ColorFactor,  150, -1*HighFlag_mm, -50);//away
 	moveForwardDistanceMM(10,10, 50);// break
+	wait1Msec(2000);
 	PunchTriggerAuto=true; // engge puncher
 	waitUntil(PunchShotStop==1);
 	timeDrop=time1[T1];
@@ -233,11 +235,13 @@ task usercontrol()
 	SensorValue[GyroTop8]=0;
   SensorValue[rightEncoder] = 0;    /* Clear the encoders for    */
   SensorValue[leftEncoder] = 0;    /* Clear the encoders for    */
-	score_mode=-2;
+//	score_mode=-2;
 	MoveFaceForward=1;
 	wait1Msec(3000);
-	go_auto();
+//	go_test();
 //	return;
+//	go_auto();
+	//return;
 	while(true)
 	{
 		int verticalPower = vexRT[Ch3]; // get joystick value for right vertical channel
@@ -254,27 +258,54 @@ task usercontrol()
 				if (Btn6D_pressed==1)  Roller_InPowerLevel*= -1;  // + in, - Out
 				Btn6D_pressed=0;
 			}
+	if (vexRT[Btn7R]==1)
+		  {
+  		Btn7R_pressed=1;
+			}
+			else     //7R ==0
+			{
+				if (Btn7R_pressed==1)  score_mode+=1;
+				if (score_mode==1) RedColor=true;
+				if (score_mode==2) RedColor=false;
+				if (score_mode==3) score_mode=0;
+				Btn7R_pressed=0;
+			}
 
-	if (vexRT[Btn6U]==1)
+		if (vexRT[Btn7L]==1)
   		{
-  		Btn6U_pressed=1;
-  		Roller_UpPower=	Roller_UpPowerLevel;
-  		if (Roller_UpPower==0)
-  				{
-  					Roller_InPower=0;
-  					Roller_InPowerLevel	= Roller_InPowerLevelMax;
-  					turnLEDOff(puncherLED);
-  				}
+  		Btn7L_pressed=1;
 			}
 			else     //6U ==0
 			{
-				if (Btn6U_pressed==1)
-					{
-						Roller_UpPowerLevel=Roller_UpPowerLevelMax-Roller_UpPower;
-					}
+				if (Btn7L_pressed==1) go_auto();
 				Btn6U_pressed=0;
 			}
 
+		if (vexRT[Btn6D]==1)
+  		{
+  		Btn6D_pressed=1;
+  		Roller_InPower=	Roller_InPowerLevel;
+  		turnLEDOn(puncherLED);
+			}
+			else     //6D ==0
+			{
+				if (Btn6D_pressed==1)  Roller_InPowerLevel*= -1;  // + in, - Out
+				Btn6D_pressed=0;
+			}
+
+	if (vexRT[Btn8U]==1)
+	{
+		if(FrontSonar_mm < MiddleFlag_mm)
+		{
+			int middleFlagDistance = MiddleFlag_mm-FrontSonar_mm;
+			moveForwardDistanceMM(middleFlagDistance, middleFlagDistance, -80);
+		}
+		if(FrontSonar_mm > MiddleFlag_mm)
+		{
+			int middleFlagDistance = FrontSonar_mm-MiddleFlag_mm;
+			moveForwardDistanceMM(middleFlagDistance, middleFlagDistance, 80);
+		}
+	}
 	if (vexRT[Btn5U]==1)
   		{
   		Btn5U_pressed=1;
@@ -341,16 +372,16 @@ void DisplayData()
 		// LCD Display
 	switch (score_mode) {
 		case 0:
-				 		displayLCDString(0, 0, "Auto Selected: ");
-						displayLCDString(1, 0, "score: No Autonomus ");
+				 		displayLCDString(0, 0, "Auto mode ");
+						displayLCDString(1, 0, "     No Autonomus   ");
 						break;
 		case 1:
-				 		displayLCDString(0, 0, "Auto Selected: ");
-						displayLCDString(1, 0, "score: Red Front ");
+				 		displayLCDString(0, 0, "Auto mode: ");
+						displayLCDString(1, 0, "     Red Front    ");
 						break;
 		case 2:
-				 		displayLCDString(0, 0, "Auto Selected: ");
-						displayLCDString(1, 0, "score: Blue Front ");
+				 		displayLCDString(0, 0, "Auto mode: ");
+						displayLCDString(1, 0, "     Blue Front    ");
 						break;
 		case 3:
 				 		displayLCDString(0, 0, "Auto Selected: ");
@@ -376,8 +407,8 @@ void DisplayData()
 //						displayNextLCDNumber(Left_Encoder);
 //						displayNextLCDString("R");
 //						displayNextLCDNumber(Right_Encoder);
-//						displayNextLCDString(" :B2=");
-//						displayNextLCDNumber(b2);
+						displayNextLCDString(" :B2=");
+						displayNextLCDNumber(b2);
 						displayNextLCDString("G");
 						displayNextLCDNumber(GyroAngle);
 						displayNextLCDString("  ");
@@ -467,6 +498,7 @@ void moveWallUntilSonarMM(int Gyro_line, int wall_distance, int Front_distance,i
 	int Front_Gyro=0;
 	int Side_diff;
 	int Gyro_diff;
+	int Front_Sonar_mean=SensorValue[frontSonic];
 //	if (Gyro_line==0) Gyro_line=GyroAngle; // keep angle
 
   while (true)
@@ -486,7 +518,10 @@ void moveWallUntilSonarMM(int Gyro_line, int wall_distance, int Front_distance,i
 		Gyro_diff=Front_Gyro-Gyro_line;
 		motor[leftFrontMotor6]=power-Gyro_diff;
 		motor[rightFrontMotor1] = power+Gyro_diff;
-		if (Front_Sonar*sgn(Front_distance)<Front_distance)	break;
+		if (Front_Sonar<100) continue;
+		if (Front_Sonar>1300) continue;
+		Front_Sonar_mean=(Front_Sonar_mean*3+Front_Sonar)/4;
+		if (Front_Sonar_mean*sgn(Front_distance)<Front_distance)	break;
 	}
 	move2D(0,0);
 	}
