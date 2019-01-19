@@ -251,7 +251,7 @@ task usercontrol()
   		{
   		Btn6D_pressed=1;
   		Roller_InPower=	Roller_InPowerLevel;
-  		turnLEDOn(puncherLED);
+  	//	turnLEDOn(puncherLED);
 			}
 			else     //6D ==0
 			{
@@ -278,14 +278,50 @@ task usercontrol()
 			else     //6U ==0
 			{
 				if (Btn7L_pressed==1) go_auto();
+				Btn7L_pressed=0;
+			}
+
+			if (vexRT[Btn6U]==1)
+
+  		{
+
+  		Btn6U_pressed=1;
+
+  		Roller_UpPower=	Roller_UpPowerLevel;
+
+  		if (Roller_UpPower==0)
+
+  				{
+
+  					Roller_InPower=0;
+
+  					Roller_InPowerLevel	= Roller_InPowerLevelMax;
+
+  				}
+
+			}
+
+			else     //6U ==0
+
+			{
+
+				if (Btn6U_pressed==1)
+
+					{
+
+						Roller_UpPowerLevel=Roller_UpPowerLevelMax-Roller_UpPower;
+
+					}
+
 				Btn6U_pressed=0;
+
 			}
 
 		if (vexRT[Btn6D]==1)
   		{
   		Btn6D_pressed=1;
   		Roller_InPower=	Roller_InPowerLevel;
-  		turnLEDOn(puncherLED);
+  //		turnLEDOn(puncherLED);
 			}
 			else     //6D ==0
 			{
@@ -425,13 +461,13 @@ void DisplayData()
 						break;
 	}
 	// LED display
-	if (fabs(FrontSonar_mm-HighFlag_mm)<100)
-			turnLEDOn(puncherLED);
-	else if
-			(fabs(FrontSonar_mm-MiddleFlag_mm)<50)
-			turnLEDOn(puncherLED);
-	else
-			turnLEDOff(puncherLED);
+//	if (fabs(FrontSonar_mm-HighFlag_mm)<100)
+		//	turnLEDOn(puncherLED);
+//	else if
+//			(fabs(FrontSonar_mm-MiddleFlag_mm)<50)
+//			turnLEDOn(puncherLED);
+//	else
+	//		turnLEDOff(puncherLED);
 }
 
 
