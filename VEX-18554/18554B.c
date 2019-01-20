@@ -132,8 +132,9 @@ void pre_auton()
 
 task autonomous()
 {
-if (	score_mode==0) return; // no auto
-	go_auto();
+		if (score_mode == 0){return;}
+		go_auto();
+		SensorValue[puncherLED] = true;
 }
 
 task displayTask()
@@ -227,7 +228,7 @@ task usercontrol()
 	startTask (displayTask);
 	SensorType(GyroTop8) = sensorNone;
 	SensorType(GyroBot7) = sensorNone;
-	wait1Msec(1000);
+	//wait1Msec(1000);
 	//Reconfigure Analog Port 8 as a Gyro sensor and allow time for ROBOTC to calibrate it
 	SensorType[GyroTop8] =sensorGyro; // sensorGyro;
 	SensorType[GyroBot7] =sensorGyro; // sensorGyro;
@@ -237,7 +238,7 @@ task usercontrol()
   SensorValue[leftEncoder] = 0;    /* Clear the encoders for    */
 //	score_mode=-2;
 	MoveFaceForward=1;
-	wait1Msec(3000);
+	//wait1Msec(3000);
 //	go_test();
 //	return;
 //	go_auto();
@@ -251,7 +252,7 @@ task usercontrol()
   		{
   		Btn6D_pressed=1;
   		Roller_InPower=	Roller_InPowerLevel;
-  	//	turnLEDOn(puncherLED);
+  		SensorValue[puncherLED] = true;
 			}
 			else     //6D ==0
 			{
@@ -321,13 +322,22 @@ task usercontrol()
   		{
   		Btn6D_pressed=1;
   		Roller_InPower=	Roller_InPowerLevel;
-  //		turnLEDOn(puncherLED);
+  SensorValue[puncherLED] = true;
 			}
 			else     //6D ==0
 			{
 				if (Btn6D_pressed==1)  Roller_InPowerLevel*= -1;  // + in, - Out
 				Btn6D_pressed=0;
 			}
+
+
+			if (vexRT[Btn7U]==1){
+				motor[frontWheelLift3BY] = 75;
+			}
+			else if (vexRT[Btn7D]==1){
+				motor[frontWheelLift3BY] = -75;
+			}
+			else{motor[frontWheelLift3BY] = 0;}
 
 	if (vexRT[Btn8U]==1)
 	{
@@ -461,13 +471,13 @@ void DisplayData()
 						break;
 	}
 	// LED display
-//	if (fabs(FrontSonar_mm-HighFlag_mm)<100)
-		//	turnLEDOn(puncherLED);
-//	else if
-//			(fabs(FrontSonar_mm-MiddleFlag_mm)<50)
-//			turnLEDOn(puncherLED);
-//	else
-	//		turnLEDOff(puncherLED);
+	if (fabs(FrontSonar_mm-HighFlag_mm)<100)
+		SensorValue[puncherLED] = true;
+	else if
+			(fabs(FrontSonar_mm-MiddleFlag_mm)<50)
+SensorValue[puncherLED] = true;
+	else
+SensorValue[puncherLED] = false;
 }
 
 
