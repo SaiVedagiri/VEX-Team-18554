@@ -132,8 +132,9 @@ void pre_auton()
 
 task autonomous()
 {
-if (	score_mode==0) return; // no auto
-	go_auto();
+		if (score_mode == 0){return;}
+		go_auto();
+		SensorValue[puncherLED] = true;
 }
 
 task displayTask()
@@ -227,7 +228,7 @@ task usercontrol()
 	startTask (displayTask);
 	SensorType(GyroTop8) = sensorNone;
 	SensorType(GyroBot7) = sensorNone;
-	wait1Msec(1000);
+	//wait1Msec(1000);
 	//Reconfigure Analog Port 8 as a Gyro sensor and allow time for ROBOTC to calibrate it
 	SensorType[GyroTop8] =sensorGyro; // sensorGyro;
 	SensorType[GyroBot7] =sensorGyro; // sensorGyro;
@@ -237,7 +238,7 @@ task usercontrol()
   SensorValue[leftEncoder] = 0;    /* Clear the encoders for    */
 //	score_mode=-2;
 	MoveFaceForward=1;
-	wait1Msec(3000);
+	//wait1Msec(3000);
 //	go_test();
 //	return;
 //	go_auto();
@@ -251,7 +252,7 @@ task usercontrol()
   		{
   		Btn6D_pressed=1;
   		Roller_InPower=	Roller_InPowerLevel;
-  		turnLEDOn(puncherLED);
+  		SensorValue[puncherLED] = true;
 			}
 			else     //6D ==0
 			{
@@ -278,20 +279,65 @@ task usercontrol()
 			else     //6U ==0
 			{
 				if (Btn7L_pressed==1) go_auto();
+				Btn7L_pressed=0;
+			}
+
+			if (vexRT[Btn6U]==1)
+
+  		{
+
+  		Btn6U_pressed=1;
+
+  		Roller_UpPower=	Roller_UpPowerLevel;
+
+  		if (Roller_UpPower==0)
+
+  				{
+
+  					Roller_InPower=0;
+
+  					Roller_InPowerLevel	= Roller_InPowerLevelMax;
+
+  				}
+
+			}
+
+			else     //6U ==0
+
+			{
+
+				if (Btn6U_pressed==1)
+
+					{
+
+						Roller_UpPowerLevel=Roller_UpPowerLevelMax-Roller_UpPower;
+
+					}
+
 				Btn6U_pressed=0;
+
 			}
 
 		if (vexRT[Btn6D]==1)
   		{
   		Btn6D_pressed=1;
   		Roller_InPower=	Roller_InPowerLevel;
-  		turnLEDOn(puncherLED);
+  SensorValue[puncherLED] = true;
 			}
 			else     //6D ==0
 			{
 				if (Btn6D_pressed==1)  Roller_InPowerLevel*= -1;  // + in, - Out
 				Btn6D_pressed=0;
 			}
+
+
+			if (vexRT[Btn7U]==1){
+				motor[frontWheelLift3BY] = 75;
+			}
+			else if (vexRT[Btn7D]==1){
+				motor[frontWheelLift3BY] = -75;
+			}
+			else{motor[frontWheelLift3BY] = 0;}
 
 	if (vexRT[Btn8U]==1)
 	{
@@ -426,12 +472,12 @@ void DisplayData()
 	}
 	// LED display
 	if (fabs(FrontSonar_mm-HighFlag_mm)<100)
-			turnLEDOn(puncherLED);
+		SensorValue[puncherLED] = true;
 	else if
 			(fabs(FrontSonar_mm-MiddleFlag_mm)<50)
-			turnLEDOn(puncherLED);
+SensorValue[puncherLED] = true;
 	else
-			turnLEDOff(puncherLED);
+SensorValue[puncherLED] = false;
 }
 
 
