@@ -15,7 +15,7 @@
 #pragma config(Motor,  port3,           frontWheelLift3BY, tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port4,            ,             tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port5,           rollerUp5,     tmotorVex393_MC29, openLoop)
-#pragma config(Motor,  port6,           leftFrontMotor6, tmotorNone, openLoop)
+#pragma config(Motor,  port6,           leftFrontMotor6, tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port7,           capFlipperMotor7, tmotorVex393_MC29, openLoop, reversed)
 #pragma config(Motor,  port8,           puncherMotor8CY, tmotorVex393_MC29, openLoop, reversed)
 #pragma config(Motor,  port9,           leftRearMotor9D, tmotorVex393_MC29, openLoop, driveLeft)
@@ -247,6 +247,7 @@ task usercontrol()
 	{
 		int verticalPower = vexRT[Ch3]; // get joystick value for right vertical channel
 		int horizontalPower = vexRT[Ch4]; // get joystick value for left vertical channel
+
 
 	if (vexRT[Btn6D]==1)
   		{
