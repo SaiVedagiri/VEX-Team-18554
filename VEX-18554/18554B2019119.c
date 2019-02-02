@@ -48,7 +48,7 @@
   int FrontHoldPower=0;
   int armHoldLightPower=15;
 	int touchsensor=2;
-  int score_mode=3;//default ed back
+  int score_mode=0;//default ed back
 	int timeDrop=0;
 	int timeCount=0;
 	int Roller_InPower=0;
@@ -71,6 +71,7 @@
 	float GyroBalance=1.3;
 	float Gyro_Cali=-0.5/1.10;
 	int GyroAngle=0;
+	int colorfactor=1; // red
 
 void move3D(int forwardsPower,int right, int turnClockPower);
 void moveForward(int forwardsPower, int turnClockPower);
@@ -151,7 +152,7 @@ void go_auto()
   clearLCDLine(1);                      // Clear line 2 (1) of the LCD
   bLCDBacklight = true;                 // Turn on LCD Backlight
 	clearTimer(T1);
-	score_mode=1;
+//	score_mode=1;
 		if (score_mode==1) AUTO_Red_Front();
 		if (score_mode==2) AUTO_Blue_Front();
 		if (score_mode==3) AUTO_Red_Back();
@@ -199,10 +200,8 @@ task usercontrol()
 	SensorType[GyroBot7] =sensorGyro; // sensorGyro;
 	SensorValue[GyroBot7]=0;
 	SensorValue[GyroTop8]=0;
-	wait1Msec(2000);
+//	wait1Msec(2000);
 	startTask(PunchStateMachine);  // controls Puch powwer
-//  score_mode=3;
-  go_auto();
 //  go_test();
   //return;
 
@@ -366,8 +365,8 @@ void moveWall2SonarDistanceMM(float velocity, float sideDistance, float moveDist
 
     diffFront = (sideFrontSonar - sideDistance) ;
     diffBack = (sideBackSonar - sideDistance) ;
-        int diff = 0.1*fabs(velocity)*sgn((sideFrontSonar - sideBackSonar));
-        int strafePower = 0.1*(velocity)*sgn((sideDistance - (sideBackSonar + sideFrontSonar)/2));
+        int diff = 0.2*fabs(velocity)*sgn((sideFrontSonar - sideBackSonar))*colorfactor;
+        int strafePower = colorfactor*0.2*abs(velocity)*sgn((sideDistance - (sideBackSonar + sideFrontSonar)/2));
  		moveForwardFront(velocity,-diff);
  		moveForwardBack(velocity, -diff-strafePower);
     }
@@ -431,7 +430,7 @@ void moveTurnRightDistanceInch(float distance_Left, float distance_Right,int pow
 
 void DisplayData()
 {
-	score_mode=-1;
+//	score_mode=-1;
 	if ((score_mode)>=0)  // <0 score mode shows data
 	{
  		displayLCDString(0, 0, "Auto Selected: ");
@@ -467,6 +466,7 @@ void DisplayData()
 
 void AUTO_Red_Front()
 {
+	colorfactor=1;
 	moveWall2SonarDistanceMM(60,170, 200);
 	PunchTriggerAuto=true;
 	wait1Msec(3000);
@@ -475,22 +475,50 @@ void AUTO_Red_Front()
 	wait1Msec(200);
 	moveWall2SonarDistanceMM(-60,120, 700);
 	moveTurnRightDegree(90,-80)
-
+	moveForwardDistanceInch(60,60,-100);
 	return;
 	}
 
 void AUTO_Blue_Front()
 	{
+		colorfactor=-1;
+	moveWall2SonarDistanceMM(60,170, 200);
+	PunchTriggerAuto=true;
+	wait1Msec(3000);
+	moveTurnRightDegree(10,-50)
+	moveWall2SonarDistanceMM(60,120, 100);
+	wait1Msec(200);
+	moveWall2SonarDistanceMM(-60,120, 700);
+	moveTurnRightDegree(90,80)
+	moveForwardDistanceInch(60,60,-100);
 	return;
 	}
 void AUTO_Red_Back()
 	{
+	PunchTriggerAuto=true;
+	wait1Msec(5000);
+	moveTurnRightDegree(20,-60);
+	moveForwardDistanceInch(16,16,50);
+	wait1Msec(500);
+	moveTurnRightDegree(90,60);
+	wait1Msec(500);
+	moveForwardDistanceInch(60,60,100);
+
 return;
 
 	}
 
 void AUTO_Blue_Back()
 	{
+			PunchTriggerAuto=true;
+	wait1Msec(5000);
+	moveTurnRightDegree(20,60);
+	moveForwardDistanceInch(16,16,50);
+	wait1Msec(500);
+	moveTurnRightDegree(90,-60);
+	wait1Msec(500);
+	moveForwardDistanceInch(60,60,100);
+
 return;
 
 	}
