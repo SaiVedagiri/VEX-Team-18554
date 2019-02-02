@@ -2,13 +2,13 @@
 #pragma config(Sensor, in2,    PotHand,        sensorPotentiometer)
 #pragma config(Sensor, in7,    GyroTop8,       sensorGyro)
 #pragma config(Sensor, in8,    GyroBot7,       sensorGyro)
-#pragma config(Sensor, dgtl1,  HeadSonic,      sensorSONAR_inch)
+#pragma config(Sensor, dgtl1,  HeadSonic,      sensorSONAR_mm)
 #pragma config(Sensor, dgtl3,  leftEncoder,    sensorQuadEncoder)
-#pragma config(Sensor, dgtl5,  BackSonic,      sensorSONAR_inch)
+#pragma config(Sensor, dgtl5,  BackSonic,      sensorSONAR_mm)
 #pragma config(Sensor, dgtl7,  shotLED,        sensorLEDtoVCC)
 #pragma config(Sensor, dgtl8,  shotStop,       sensorTouch)
 #pragma config(Sensor, dgtl9,  rightEncoder,   sensorQuadEncoder)
-#pragma config(Sensor, dgtl11, FrontSonic,     sensorSONAR_inch)
+#pragma config(Sensor, dgtl11, FrontSonic,     sensorSONAR_mm)
 #pragma config(Motor,  port1,           RightFrontMotor1, tmotorVex393_HBridge, openLoop, reversed, driveRight)
 #pragma config(Motor,  port2,           LeftFrontMotor2A, tmotorVex393_MC29, openLoop, reversed, driveLeft)
 #pragma config(Motor,  port3,           FrontWheelLift3BY, tmotorVex393_MC29, openLoop)
@@ -61,7 +61,7 @@
 	int Btn6U_pressed=0;
 	int PunchState=0;  // S=1, P=0
 	int PunchPower=0;
-	int PunchPowerMax=30;
+	int PunchPowerMax=80;
 	int PunchPowerHold=5;
 	bool PunchTriggerred=false;
 	bool PunchTriggerAuto=false;
@@ -77,7 +77,10 @@ void moveForward(int forwardsPower, int turnClockPower);
 void moveForwardDistanceInch(float distance_Left, float distance_Right, int power);
 void moveTurnRightDistanceInch(float distance_Left, float distance_Right,int power);
 void moveTurnRightDegree(int turnDegree,int power);
+void moveWall2SonarDistanceMM(float velocity, float sideDistance, float moveDistanceMM);
 void DisplayData();
+void moveForwardFront(int forwardPower, int turnClockPower);
+void moveForwardBack(int forwardPower, int turnClockPower);
 void moveArmUpDegree(int upDegree, int armPower);
 void moveArmDownDegree(int downDegree, int armPower);
 void moveIntake(int istart);
@@ -148,7 +151,7 @@ void go_auto()
   clearLCDLine(1);                      // Clear line 2 (1) of the LCD
   bLCDBacklight = true;                 // Turn on LCD Backlight
 	clearTimer(T1);
-//	score_mode=2;
+	score_mode=1;
 		if (score_mode==1) AUTO_Red_Front();
 		if (score_mode==2) AUTO_Blue_Front();
 		if (score_mode==3) AUTO_Red_Back();
@@ -162,10 +165,10 @@ void go_test()
 {
 	//go straight line for 100 inches
  //moveForwardDistanceInch(80,80, 20);
- 	// turn 180 degree
- moveTurnRightDegree(180,50);
- wait1Msec(500);
- moveTurnRightDegree(180,-50);
+	moveWall2SonarDistanceMM(60,170, 50);
+	PunchPower=PunchPowerMax;
+	movePunch();
+  //smoveTurnRightDegree(180,-50);
 }
 
 
@@ -199,7 +202,7 @@ task usercontrol()
 	wait1Msec(2000);
 	startTask(PunchStateMachine);  // controls Puch powwer
 //  score_mode=3;
-//  go_auto();
+  go_auto();
 //  go_test();
   //return;
 
@@ -289,6 +292,21 @@ void moveForward(int forwardsPower, int turnClockPower)
  motor[LeftRearMotor9D] = power;
 }
 
+void moveForwardFront(int forwardPower, int turnClockPower)
+{
+ int power=forwardPower-turnClockPower;
+ motor[RightFrontMotor1] = power;
+ power=forwardPower+turnClockPower;
+ motor[LeftFrontMotor2A] = power;
+}
+void moveForwardBack(int forwardPower, int turnClockPower)
+{
+ int power=forwardPower-turnClockPower;
+ motor[RightRearMotor10] = power;
+ power=forwardPower+turnClockPower;
+ motor[LeftRearMotor9D] = power;
+}
+
 void moveUpFront(int FWpower)
 {
 motor[FrontWheelLift3BY]=FWpower;
@@ -327,6 +345,34 @@ void ShotBall()
 	touchsensor=SensorValue(shotStop);
 }
 
+void moveWall2SonarDistanceMM(float velocity, float sideDistance, float moveDistanceMM)
+{
+	  float headSonarValue,frontSonarValue,backSonarValue, sideFrontSonar, sideBackSonar;
+    float diffFront, diffBack, moveDistance;
+  SensorValue[rightEncoder] = 0;    /* Clear the encoders for    */
+  SensorValue[leftEncoder] = 0;    /* Clear the encoders for    */
+    while(true)
+    {
+    headSonarValue = SensorValue[HeadSonic];
+    frontSonarValue = SensorValue[FrontSonic];
+    backSonarValue = SensorValue[BackSonic];
+		Lencode=fabs(SensorValue[leftEncoder]);
+		Rencode=fabs(SensorValue[rightEncoder]);
+		leftTravel=25.4*Lencode/Inches2encoder;
+		rightTravel=25.4*Rencode/Inches2encoder;
+		if (fabs(leftTravel)+fabs(rightTravel)>2*moveDistanceMM)	break;
+    sideBackSonar=backSonarValue;
+    sideFrontSonar=frontSonarValue;
+
+    diffFront = (sideFrontSonar - sideDistance) ;
+    diffBack = (sideBackSonar - sideDistance) ;
+        int diff = 0.1*fabs(velocity)*sgn((sideFrontSonar - sideBackSonar));
+        int strafePower = 0.1*(velocity)*sgn((sideDistance - (sideBackSonar + sideFrontSonar)/2));
+ 		moveForwardFront(velocity,-diff);
+ 		moveForwardBack(velocity, -diff-strafePower);
+    }
+    moveForward(0,0);
+}
 void moveForwardDistanceInch(float distance_Left, float distance_Right,int power)
 {
 	float left2right_ratio=distance_Left/distance_Right;
@@ -421,7 +467,16 @@ void DisplayData()
 
 void AUTO_Red_Front()
 {
- 	return;
+	moveWall2SonarDistanceMM(60,170, 200);
+	PunchTriggerAuto=true;
+	wait1Msec(3000);
+	moveTurnRightDegree(10,-50)
+	moveWall2SonarDistanceMM(60,120, 100);
+	wait1Msec(200);
+	moveWall2SonarDistanceMM(-60,120, 700);
+	moveTurnRightDegree(90,-80)
+
+	return;
 	}
 
 void AUTO_Blue_Front()
@@ -471,7 +526,7 @@ task PunchStateMachine()
 					if (PunchShotStop==0) PunchState++; //Power continue until S=0
 					break;
 				case	2:
-					wait1Msec(3000);		//S=0
+					wait1Msec(1000);		//S=0
 					PunchPower=PunchPowerHold;  //hold the punch, S=0
 					PunchState++;
 					break;
