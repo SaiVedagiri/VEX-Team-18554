@@ -407,8 +407,12 @@ void DisplayData()
  //		displayNextLCDString(":Diff= ");
 
 // 		displayLCDString(1,0,"Run Time:diff ");
- 		displayLCDString(1,0,"F Sonar ");
+ 		displayLCDString(1,0,"HS");
+		displayNextLCDNumber(SensorValue[HeadSonic]);
+  		displayNextLCDString(" FS");
 		displayNextLCDNumber(SensorValue[FrontSonic]);
+  		displayNextLCDString(" BS");
+ 		displayNextLCDNumber(SensorValue[BackSonic]);
   		displayNextLCDString("  ");
 		//displayNextLCDNumber(time1[T1]/10);
  		//displayNextLCDNumber(SensorValue(Potent));//[T1]/10);
