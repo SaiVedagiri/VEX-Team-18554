@@ -261,7 +261,7 @@ task usercontrol()
 				Btn6U_pressed=0;
 			}
 
-   forwards=vexRT[Ch3];//+forwardsFine*(vexRT[Btn8U]-vexRT[Btn8D]);
+   forwards=vexRT[Ch3]/2;//+forwardsFine*(vexRT[Btn8U]-vexRT[Btn8D]);
    turnClock=vexRT[Ch4]/2;
    if (fabs(turnClock)<20) turnClock=0;
 		move3D(forwards,0,turnClock);
